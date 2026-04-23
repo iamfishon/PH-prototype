@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayHorny - 信件管理後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-primary': '#0f0f14',
+                        'bg-secondary': '#1a1a2e',
+                        'bg-tertiary': '#252540',
+                        'border-clr': '#2d2d4a',
+                        'border-light': '#3d3d5c',
+                        'purple-main': '#7c3aed',
+                        'purple-light': '#8b5cf6',
+                        'purple-dark': '#6d28d9',
+                        'text-primary': '#f0f0f0',
+                        'text-secondary': '#a0a0b8',
+                        'text-muted': '#6b6b80',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f0f14;
+            color: #f0f0f0;
+        }
+        select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f0f14; }
+        ::-webkit-scrollbar-thumb { background: #2d2d4a; border-radius: 3px; }
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+    </style>
+</head>
+<body>
+
+<!-- ==================== App Container ==================== -->
+<div id="app">
+
+    <!-- Header -->
+    <header class="h-16 bg-bg-secondary border-b border-border-clr flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-40">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl font-bold text-purple-light italic tracking-wider">PlayHorny</span>
+            <span class="text-xs text-text-muted ml-2">Admin</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-sm text-text-muted">User ID: 1000006</span>
+            <div class="w-8 h-8 rounded-full bg-bg-tertiary border border-border-clr"></div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-bg-secondary border-r border-border-clr fixed left-0 top-16 bottom-0 overflow-y-auto z-30" id="sidebar">
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-56 mt-16 p-8 min-h-screen">
+        <!-- Breadcrumb -->
+        <nav class="text-sm text-text-muted mb-2">
+            <span class="hover:text-text-secondary cursor-pointer">首頁</span>
+            <span class="mx-2">›</span>
+            <span class="hover:text-text-secondary cursor-pointer">信件管理</span>
+            <span class="mx-2">›</span>
+            <span class="text-purple-light">信件建立與發送</span>
+        </nav>
+        <h1 class="text-2xl font-bold text-text-primary mb-8">信件建立與發送</h1>
+
+        <!-- Step Wizard -->
+        <div class="flex items-center w-full mb-10" id="step-wizard"></div>
+
+        <!-- Step Content -->
+        <div id="step-content"></div>
+    </main>
+</div>
+
+<script>
+// ==================== STATE ====================
+const LANGUAGES = [
+    { key: 'zh-TW', label: '繁體中文' },
+    { key: 'zh-CN', label: '簡體中文' },
+    { key: 'en', label: '英文' },
+    { key: 'ja', label: '日文' },
+    { key: 'ko', label: '韓文' },
+];
+
+const GAMES = [
+    { id: 'playhorny', name: 'PlayHorny' },
+    { id: 'game2', name: 'Game 2' },
+    { id: 'game3', name: 'Game 3' },
+];
+
+const state = {
+    currentStep: 1,
+    gameId: '',
+    mailName: '',
+    htmlTemplateName: '',
+    textCsvName: '',
+    subjectKey: '',
+    enableRedeemCodes: false,
+    redeemCodesCsvName: '',
+    redeemCodesCount: 0,
+    targetLists: {},
+    sendTime: '',
+};
+
+// Init target lists
+LANGUAGES.forEach(l => { state.targetLists[l.key] = { fileName: '', count: 0 }; });
+
+// ==================== SIDEBAR ====================
+const sidebarItems = [
+    { label: '遊戲資料', open: false, children: [] },
+    { label: '前台首頁', open: false, children: [] },
+    { label: '客服中心', open: false, children: [] },
+    { label: '會員中心', open: false, children: [] },
+    { label: '金流相關', open: false, children: [] },
+    { label: '代理中心', open: false, children: [] },
+    { label: '常用工具', open: false, children: [] },
+    { label: '廣告管理', open: false, children: [] },
+    { label: '信件中心', open: true, children: [
+        { label: '信件管理', active: true },
+        { label: '信件圖庫', active: false },
+    ]},
+    { label: '兌換碼管理', open: false, children: [] },
+    { label: '成員與權限', open: false, children: [] },
+];
+
+function renderSidebar() {
+    const el = document.getElementById('sidebar');
+    el.innerHTML = '<nav class="py-4">' + sidebarItems.map(item => {
+        const arrow = `<svg class="w-4 h-4 transition-transform ${item.open ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
+        let html = `<button onclick="toggleSidebar('${item.label}')" class="w-full flex items-center justify-between px-5 py-3 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-tertiary/50 transition-colors"><span>${item.label}</span>${arrow}</button>`;
+        if (item.open && item.children.length) {
+            html += item.children.map(c =>
+                `<a class="block pl-10 pr-5 py-2.5 text-sm transition-colors ${c.active ? 'text-purple-light bg-purple-main/10' : 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary/30'}" href="#">${c.label}</a>`
+            ).join('');
+        }
+        return html;
+    }).join('') + '</nav>' +
+    '<div class="absolute bottom-0 left-0 right-0 px-4 py-3 border-t border-border-clr text-xs text-text-muted"><p>版本號 v4.1.9-rc.1</p><p>環境: stage</p></div>';
+}
+
+function toggleSidebar(label) {
+    const item = sidebarItems.find(i => i.label === label);
+    if (item) { item.open = !item.open; renderSidebar(); }
+}
+
+// ==================== STEP WIZARD ====================
+const STEPS = [
+    { number: 1, label: '建立信件資料' },
+    { number: 2, label: '上傳信件資料' },
+    { number: 3, label: '預覽與測試' },
+    { number: 4, label: '目標與時間' },
+    { number: 5, label: '最終確認' },
+];
+
+function renderWizard() {
+    const el = document.getElementById('step-wizard');
+    el.innerHTML = STEPS.map((step, idx) => {
+        const isCurrent = step.number === state.currentStep;
+        const isPast = step.number < state.currentStep;
+        const circleClass = isCurrent
+            ? 'bg-purple-main text-white shadow-[0_0_12px_rgba(124,58,237,0.5)]'
+            : isPast
+                ? 'bg-purple-main/30 text-purple-light'
+                : 'bg-bg-tertiary text-text-muted border border-border-clr';
+        const labelClass = isCurrent ? 'text-purple-light' : isPast ? 'text-text-secondary' : 'text-text-muted';
+        const lineClass = isPast ? 'bg-purple-main/50' : 'bg-border-clr';
+
+        const icon = isPast
+            ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+            : step.number;
+
+        let html = `<div class="flex items-center ${idx < STEPS.length - 1 ? 'flex-1' : ''}">`;
+        html += `<div class="flex flex-col items-center"><div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${circleClass}">${icon}</div><span class="mt-2 text-xs font-medium whitespace-nowrap ${labelClass}">${step.label}</span></div>`;
+        if (idx < STEPS.length - 1) {
+            html += `<div class="flex-1 mx-2 -mt-5"><div class="h-0.5 rounded ${lineClass}"></div></div>`;
+        }
+        html += '</div>';
+        return html;
+    }).join('');
+}
+
+// ==================== STEP RENDERERS ====================
+
+function renderStep1() {
+    return `
+    <div class="space-y-8 max-w-2xl">
+        <div class="space-y-2">
+            <label class="block text-sm font-medium text-text-primary"><span class="text-red-500 mr-1">*</span>信件對應遊戲</label>
+            <p class="text-sm text-text-muted">請下拉選擇與該信件相關的遊戲</p>
+            <select id="f-gameId" class="w-full max-w-sm bg-bg-tertiary border border-border-clr rounded px-4 py-2.5 text-text-primary focus:outline-none focus:border-purple-main appearance-none cursor-pointer" onchange="state.gameId=this.value">
+                <option value="" disabled ${!state.gameId ? 'selected' : ''}>請選擇</option>
+                ${GAMES.map(g => `<option value="${g.id}" ${state.gameId === g.id ? 'selected' : ''}>${g.name}</option>`).join('')}
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="block text-sm font-medium text-text-primary"><span class="text-red-500 mr-1">*</span>信件名稱</label>
+            <p class="text-sm text-text-muted">請輸入該信件的名稱以便搜尋</p>
+            <input id="f-mailName" type="text" placeholder="請輸入信件名稱" value="${state.mailName}" oninput="state.mailName=this.value"
+                class="w-full max-w-sm bg-bg-tertiary border border-border-clr rounded px-4 py-2.5 text-text-primary placeholder-text-muted focus:outline-none focus:border-purple-main">
+        </div>
+        ${renderBottomActions({ showCancel: true, showNext: true })}
+    </div>`;
+}
+
+function renderStep2() {
+    const redeemSection = state.enableRedeemCodes ? `
+        <div class="space-y-4 pl-4 border-l-2 border-purple-main/30 ml-1 mt-4">
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-text-primary"><span class="text-red-500 mr-1">*</span>兌換碼清單</label>
+                <p class="text-sm text-text-muted">請上傳包含兌換碼的 CSV 檔案（每行一組兌換碼）</p>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 bg-bg-tertiary border border-border-clr rounded px-4 py-2 min-w-[200px]">
+                        <span class="text-sm text-text-muted truncate">${state.redeemCodesCsvName || '*請上傳csv檔案'}</span>
+                    </div>
+                    <label class="bg-purple-main/20 text-purple-light border border-purple-main/30 px-4 py-2 rounded text-sm font-medium hover:bg-purple-main/30 transition-colors cursor-pointer whitespace-nowrap">
+                        選擇檔案
+                        <input type="file" accept=".csv" class="hidden" onchange="handleRedeemUpload(this)">
+                    </label>
+                    ${state.redeemCodesCsvName ? `<button onclick="clearRedeemCodes()" class="text-text-muted hover:text-red-500 text-sm transition-colors">清除</button>` : ''}
+                </div>
+            </div>
+            ${state.redeemCodesCount > 0 ? `
+            <div class="flex items-center gap-2 bg-purple-main/10 border border-purple-main/20 rounded px-4 py-3">
+                <svg class="w-5 h-5 text-purple-light shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="text-sm text-purple-light font-medium">已匯入 ${state.redeemCodesCount.toLocaleString()} 組兌換碼</span>
+            </div>` : ''}
+        </div>` : '';
+
+    return `
+    <div class="space-y-8 max-w-3xl">
+        <!-- 信件模板 -->
+        <div class="space-y-3">
+            <label class="block text-sm font-medium text-text-primary"><span class="text-red-500 mr-1">*</span>信件模板</label>
+            <p class="text-sm text-text-muted">請上傳信件模板「html檔案」（可從應用平台 [beefree] 建立模板後輸出下載「html檔案」）。</p>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-bg-tertiary border border-border-clr rounded px-4 py-2 min-w-[200px]">
+                    <span class="text-sm text-text-muted truncate">${state.htmlTemplateName || '*請上傳html檔案'}</span>
+                </div>
+                <label class="bg-purple-main/20 text-purple-light border border-purple-main/30 px-4 py-2 rounded text-sm font-medium hover:bg-purple-main/30 transition-colors cursor-pointer whitespace-nowrap">
+                    選擇檔案
+                    <input type="file" accept=".html" class="hidden" onchange="handleFileUpload(this,'htmlTemplateName')">
+                </label>
+                ${state.htmlTemplateName ? `<button onclick="state.htmlTemplateName='';render()" class="text-text-muted hover:text-red-500 text-sm transition-colors">清除</button>` : ''}
+            </div>
+            <a href="https://beefree.io" target="_blank" class="inline-flex items-center gap-2 text-sm text-purple-light hover:underline">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                前往 beefree 建立模組
+            </a>
+        </div>
+
+        <!-- 文字表 -->
+        <div class="space-y-3">
+            <label class="block text-sm font-medium text-text-primary"><span class="text-red-500 mr-1">*</span>文字表</label>
+            <p class="text-sm text-text-muted">請上傳該信件模板使用的文字表「文字表.csv」檔案，並將信件使用的主旨 key 填入。</p>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-bg-tertiary border border-border-clr rounded px-4 py-2 min-w-[200px]">
+                    <span class="text-sm text-text-muted truncate">${state.textCsvName || '*請上傳csv檔案'}</span>
+                </div>
+                <label class="bg-purple-main/20 text-purple-light border border-purple-main/30 px-4 py-2 rounded text-sm font-medium hover:bg-purple-main/30 transition-colors cursor-pointer whitespace-nowrap">
+                    選擇檔案
+                    <input type="file" accept=".csv" class="hidden" onchange="handleFileUpload(this,'textCsvName')">
+                </label>
+                ${state.textCsvName ? `<button onclick="state.textCsvName='';render()" class="text-text-muted hover:text-red-500 text-sm transition-colors">清除</button>` : ''}
+            </div>
+            <input type="text" placeholder="*請輸入信件主旨的key" value="${state.subjectKey}" oninput="state.subjectKey=this.value"
+                class="w-full max-w-sm bg-bg-tertiary border border-border-clr rounded px-4 py-2.5 text-text-primary placeholder-text-muted focus:outline-none focus:border-purple-main">
+            <a href="#" class="inline-flex items-center gap-2 text-sm text-purple-light hover:underline">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                前往文字表範本
+            </a>
+        </div>
+
+        <!-- 批量兌換碼 -->
+        <div class="border border-border-clr rounded-lg p-6 space-y-3 bg-bg-secondary/50">
+            <div class="flex items-start gap-4">
+                <button onclick="toggleRedeemCodes()" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${state.enableRedeemCodes ? 'bg-purple-main' : 'bg-border-clr'}">
+                    <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${state.enableRedeemCodes ? 'translate-x-5' : 'translate-x-0'}"></span>
+                </button>
+                <div>
+                    <span class="text-sm font-medium text-text-primary">批量派發兌換碼</span>
+                    <p class="text-sm text-text-muted mt-0.5">啟用後可上傳兌換碼 CSV，系統將隨機分配兌換碼至各封信件中</p>
+                </div>
+            </div>
+            ${redeemSection}
+        </div>
+
+        <p class="text-red-500 text-sm font-medium">!! 如步驟二資料有修改，請同步更新所有項目，避免資料不一致造成衝突。!!</p>
+        ${renderBottomActions({ showCancel: true, showPrev: true, showNext: true })}
+    </div>`;
+}
+
+function renderStep3() {
+    return `
+    <div class="space-y-10 max-w-3xl">
+        <div class="space-y-4">
+            <div>
+                <h3 class="text-base font-semibold text-text-primary">信件預覽</h3>
+                <p class="text-sm text-text-muted mt-1">可查看當前信件各語系完整樣式</p>
+            </div>
+            <div class="space-y-3">
+                ${LANGUAGES.map((lang, i) => {
+                    const available = i === 0 && state.htmlTemplateName;
+                    const btn = available
+                        ? `<button class="bg-purple-main text-white px-3 py-1.5 text-sm rounded font-medium hover:bg-purple-light transition-colors">預覽</button>`
+                        : `<span class="text-sm text-text-muted bg-bg-tertiary px-3 py-1.5 rounded">尚未上傳</span>`;
+                    return `<div class="flex items-center gap-4"><span class="text-sm text-text-secondary w-20 shrink-0">${lang.label}：</span>${btn}</div>`;
+                }).join('')}
+            </div>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <h3 class="text-base font-semibold text-text-primary">信件測試發送</h3>
+                <p class="text-sm text-text-muted mt-1">發送信件至填入的Email，每次寄送限制為最多5個電子郵件地址。</p>
+            </div>
+            <div class="space-y-3">
+                ${LANGUAGES.map(lang => `
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm text-text-secondary w-20 shrink-0">${lang.label}：</span>
+                        <div class="flex items-center gap-2">
+                            <input type="email" placeholder="輸入測試 Email" class="bg-bg-tertiary border border-border-clr rounded px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-purple-main w-60">
+                            <button onclick="alert('已發送測試信件')" class="bg-purple-main text-white px-3 py-1.5 text-sm rounded font-medium hover:bg-purple-light transition-colors">測試發送</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        ${renderBottomActions({ showCancel: true, showPrev: true, showNext: true })}
+    </div>`;
+}
+
+function renderStep4() {
+    const totalTarget = Object.values(state.targetLists).reduce((s, t) => s + t.count, 0);
+    const hasRedeem = state.enableRedeemCodes;
+    const codeCount = state.redeemCodesCount;
+    const sufficient = !hasRedeem || codeCount >= totalTarget;
+
+    let validationHtml = '';
+    if (hasRedeem && totalTarget > 0) {
+        if (sufficient) {
+            validationHtml = `
+            <div class="flex items-start gap-3 rounded-lg px-5 py-4 border bg-green-500/10 border-green-500/30">
+                <svg class="w-5 h-5 text-green-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p class="text-sm font-medium text-green-500">兌換碼數量充足（${codeCount.toLocaleString()} 組 / 目標 ${totalTarget.toLocaleString()} 人）</p>
+            </div>`;
+        } else {
+            validationHtml = `
+            <div class="flex items-start gap-3 rounded-lg px-5 py-4 border bg-red-500/10 border-red-500/30">
+                <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                <div>
+                    <p class="text-sm font-medium text-red-500">兌換碼數量（${codeCount.toLocaleString()}）少於目標總人數（${totalTarget.toLocaleString()}），請補充兌換碼或減少目標名單</p>
+                    <button onclick="goToStep(2)" class="text-sm text-purple-light hover:underline mt-1">返回步驟 2 補充兌換碼</button>
+                </div>
+            </div>`;
+        }
+    }
+
+    return `
+    <div class="space-y-10 max-w-3xl">
+        <div class="space-y-4">
+            <div>
+                <h3 class="text-base font-semibold text-text-primary">發送目標</h3>
+                <p class="text-sm text-text-muted mt-1">請上傳信件各語系要發送的「目標名單.csv」檔案。</p>
+            </div>
+            <div class="space-y-4">
+                ${LANGUAGES.map(lang => {
+                    const t = state.targetLists[lang.key];
+                    return `
+                    <div class="flex items-start gap-4">
+                        <span class="text-sm text-text-secondary w-20 shrink-0 pt-2">${lang.label}：</span>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2 bg-bg-tertiary border border-border-clr rounded px-4 py-2 min-w-[200px]">
+                                    <span class="text-sm text-text-muted truncate">${t.fileName || '*請上傳csv檔案'}</span>
+                                </div>
+                                <label class="bg-purple-main/20 text-purple-light border border-purple-main/30 px-4 py-2 rounded text-sm font-medium hover:bg-purple-main/30 transition-colors cursor-pointer whitespace-nowrap">
+                                    選擇檔案
+                                    <input type="file" accept=".csv" class="hidden" onchange="handleTargetUpload(this,'${lang.key}')">
+                                </label>
+                                ${t.fileName ? `<button onclick="clearTarget('${lang.key}')" class="text-text-muted hover:text-red-500 text-sm transition-colors">清除</button>` : ''}
+                            </div>
+                            ${t.count > 0 ? `<span class="text-xs text-text-muted mt-1 block">共 ${t.count.toLocaleString()} 筆目標</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+
+        ${validationHtml}
+
+        <div class="space-y-3">
+            <label class="block text-sm font-medium text-text-primary">發送時間</label>
+            <p class="text-sm text-text-muted">請選取該信件要發送的時間，如欲設定最近時間，僅能選當下五分鐘後的時段。</p>
+            <div class="flex items-center gap-3">
+                <input type="datetime-local" value="${state.sendTime}" onchange="state.sendTime=this.value;render()"
+                    class="bg-bg-tertiary border border-border-clr rounded px-4 py-2.5 text-text-primary focus:outline-none focus:border-purple-main">
+                ${state.sendTime ? `<button onclick="state.sendTime='';render()" class="text-sm text-red-500 hover:text-red-400 transition-colors">清空值</button>` : ''}
+            </div>
+            ${state.sendTime ? `<p class="text-sm text-red-500">*若要移除已設定時間(清空時間設定)，請點選空值按鈕</p>` : ''}
+        </div>
+
+        ${renderBottomActions({ showCancel: true, showPrev: true, showSkip: true, showNext: true })}
+    </div>`;
+}
+
+function renderStep5() {
+    const gameName = GAMES.find(g => g.id === state.gameId)?.name || '-';
+    const totalTarget = Object.values(state.targetLists).reduce((s, t) => s + t.count, 0);
+    const hasRedeem = state.enableRedeemCodes;
+    const codeCount = state.redeemCodesCount;
+    const sufficient = !hasRedeem || codeCount >= totalTarget;
+    const hasAnyTarget = Object.values(state.targetLists).some(t => t.count > 0);
+
+    const formatDT = (dt) => {
+        if (!dt) return '-';
+        try { return new Date(dt).toLocaleString('zh-TW'); } catch { return dt; }
+    };
+
+    const infoRow = (label, value) => `<div class="flex items-start gap-2"><span class="text-sm text-text-muted w-28 shrink-0">${label}：</span><span class="text-sm text-text-primary">${value}</span></div>`;
+
+    let redeemHtml = '';
+    if (hasRedeem) {
+        const statusHtml = totalTarget > 0
+            ? `<span class="text-sm font-medium ${sufficient ? 'text-green-500' : 'text-red-500'}">${sufficient ? '數量充足 ✓' : '數量不足 ✗'}</span>`
+            : `<span class="text-sm text-text-muted">尚未設定目標名單</span>`;
+        redeemHtml = `
+        <div class="border border-purple-main/30 rounded-lg p-5 bg-purple-main/5 space-y-3">
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-semibold text-purple-light">批量兌換碼</h4>
+                <button onclick="clearAllRedeemCodes()" class="bg-red-500/10 text-red-500 border border-red-500/30 px-3 py-1.5 rounded text-sm font-medium hover:bg-red-500/20 transition-colors">刪除</button>
+            </div>
+            ${infoRow('兌換碼檔案', state.redeemCodesCsvName || '-')}
+            ${infoRow('兌換碼數量', codeCount.toLocaleString() + ' 組')}
+            ${infoRow('目標總人數', totalTarget.toLocaleString() + ' 人')}
+            <div class="flex items-start gap-2"><span class="text-sm text-text-muted w-28 shrink-0">狀態：</span>${statusHtml}</div>
+        </div>`;
+    }
+
+    let targetHtml = '';
+    if (hasAnyTarget) {
+        targetHtml = LANGUAGES.map(lang => {
+            const t = state.targetLists[lang.key];
+            if (!t.fileName) return '';
+            return `<p class="text-sm text-text-primary">${lang.label}：${t.fileName}（${t.count.toLocaleString()} 筆）</p>`;
+        }).join('');
+    }
+
+    return `
+    <div class="space-y-6 max-w-3xl">
+        <h3 class="text-lg font-semibold text-text-primary">最終確認</h3>
+        <div class="space-y-3">
+            ${infoRow('信件對應遊戲', gameName)}
+            ${infoRow('信件名稱', state.mailName || '-')}
+            ${infoRow('信件主旨', state.subjectKey ? 'key: ' + state.subjectKey : '-')}
+            ${infoRow('信件模板', state.htmlTemplateName || '-')}
+            ${infoRow('文字表', state.textCsvName || '-')}
+        </div>
+
+        ${redeemHtml}
+
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-text-muted">發送目標：</span>
+                ${hasAnyTarget ? `<button onclick="clearAllTargets()" class="bg-red-500/10 text-red-500 border border-red-500/30 px-3 py-1.5 rounded text-sm font-medium hover:bg-red-500/20 transition-colors">刪除</button>` : ''}
+            </div>
+            ${hasAnyTarget ? `<div class="space-y-1 pl-2">${targetHtml}</div>` : '<span class="text-sm text-text-primary">-</span>'}
+        </div>
+
+        <div class="flex items-center justify-between">
+            ${infoRow('發送時間', formatDT(state.sendTime))}
+            ${state.sendTime ? `<button onclick="state.sendTime='';render()" class="bg-red-500/10 text-red-500 border border-red-500/30 px-3 py-1.5 rounded text-sm font-medium hover:bg-red-500/20 transition-colors">刪除</button>` : ''}
+        </div>
+
+        ${!hasAnyTarget ? '<p class="text-sm text-amber-500">發送目標未設定，請記得上傳以避免送出資料錯誤。</p>' : ''}
+
+        ${renderBottomActions({ showCancel: true, showPrev: true, showConfirm: true })}
+    </div>`;
+}
+
+// ==================== BOTTOM ACTIONS ====================
+function renderBottomActions(opts = {}) {
+    let html = '<div class="flex justify-end gap-3 pt-8 border-t border-border-clr mt-8">';
+    if (opts.showCancel) html += `<button onclick="if(confirm('確定要取消嗎？'))location.reload()" class="text-text-secondary hover:text-text-primary px-5 py-2.5 text-sm font-medium transition-colors">取消</button>`;
+    if (opts.showPrev) html += `<button onclick="prevStep()" class="bg-bg-tertiary text-text-secondary border border-border-clr hover:bg-border-clr hover:text-text-primary px-5 py-2.5 text-sm font-medium rounded transition-colors">上一步</button>`;
+    if (opts.showSkip) html += `<button onclick="nextStep()" class="bg-bg-tertiary text-text-secondary border border-border-clr hover:bg-border-clr hover:text-text-primary px-5 py-2.5 text-sm font-medium rounded transition-colors">略過</button>`;
+    if (opts.showNext) html += `<button onclick="nextStep()" class="bg-purple-main text-white hover:bg-purple-light px-5 py-2.5 text-sm font-medium rounded transition-colors">下一步</button>`;
+    if (opts.showConfirm) html += `<button onclick="alert('信件已確認送出！')" class="bg-purple-main text-white hover:bg-purple-light px-5 py-2.5 text-sm font-medium rounded transition-colors">確認</button>`;
+    html += '</div>';
+    return html;
+}
+
+// ==================== EVENT HANDLERS ====================
+function nextStep() { if (state.currentStep < 5) { state.currentStep++; render(); } }
+function prevStep() { if (state.currentStep > 1) { state.currentStep--; render(); } }
+function goToStep(n) { state.currentStep = n; render(); }
+
+function handleFileUpload(input, field) {
+    const file = input.files[0];
+    if (file) { state[field] = file.name; render(); }
+}
+
+function handleRedeemUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    state.redeemCodesCsvName = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(l => l.trim());
+        state.redeemCodesCount = Math.max(0, lines.length - 1);
+        render();
+    };
+    reader.readAsText(file);
+}
+
+function clearRedeemCodes() {
+    state.redeemCodesCsvName = '';
+    state.redeemCodesCount = 0;
+    render();
+}
+
+function clearAllRedeemCodes() {
+    state.enableRedeemCodes = false;
+    state.redeemCodesCsvName = '';
+    state.redeemCodesCount = 0;
+    render();
+}
+
+function toggleRedeemCodes() {
+    state.enableRedeemCodes = !state.enableRedeemCodes;
+    if (!state.enableRedeemCodes) {
+        state.redeemCodesCsvName = '';
+        state.redeemCodesCount = 0;
+    }
+    render();
+}
+
+function handleTargetUpload(input, langKey) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(l => l.trim());
+        state.targetLists[langKey] = { fileName: file.name, count: Math.max(0, lines.length - 1) };
+        render();
+    };
+    reader.readAsText(file);
+}
+
+function clearTarget(langKey) {
+    state.targetLists[langKey] = { fileName: '', count: 0 };
+    render();
+}
+
+function clearAllTargets() {
+    LANGUAGES.forEach(l => { state.targetLists[l.key] = { fileName: '', count: 0 }; });
+    render();
+}
+
+// ==================== RENDER ====================
+function render() {
+    renderSidebar();
+    renderWizard();
+
+    const contentEl = document.getElementById('step-content');
+    switch (state.currentStep) {
+        case 1: contentEl.innerHTML = renderStep1(); break;
+        case 2: contentEl.innerHTML = renderStep2(); break;
+        case 3: contentEl.innerHTML = renderStep3(); break;
+        case 4: contentEl.innerHTML = renderStep4(); break;
+        case 5: contentEl.innerHTML = renderStep5(); break;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>

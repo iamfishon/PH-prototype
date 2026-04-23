@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跑馬燈展示 | Marquee Showcase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Thai:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0e0e12;
+            --surface: #1a1a24;
+            --surface-alt: #22222e;
+            --border: #2e2e3e;
+            --text: #e8e8f0;
+            --text-dim: #8888a0;
+            --accent: #7c6aff;
+            --accent-glow: rgba(124, 106, 255, 0.3);
+            --marquee-bg: #14141c;
+            --tag-bg: #2a2a3a;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ===== Layout ===== */
+        .page-header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            border-bottom: 1px solid var(--border);
+        }
+        .page-header h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #7c6aff, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .page-header p {
+            color: var(--text-dim);
+            font-size: 1rem;
+        }
+
+        .showcase {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        /* ===== Card ===== */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .card-head {
+            padding: 24px 28px 16px;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .card-head .num {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: var(--tag-bg);
+            border-radius: 6px;
+            padding: 2px 10px;
+            letter-spacing: 0.05em;
+        }
+        .card-head h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .card-head .en {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .card-desc {
+            padding: 0 28px 16px;
+            color: var(--text-dim);
+            font-size: 0.88rem;
+        }
+
+        /* Demo area */
+        .demo-area {
+            background: var(--marquee-bg);
+            border-top: 1px solid var(--border);
+            padding: 0;
+            position: relative;
+            min-height: 56px;
+            overflow: hidden;
+        }
+        .demo-area.padded {
+            padding: 20px 28px;
+        }
+
+        /* Language tabs */
+        .lang-tabs {
+            display: flex;
+            gap: 6px;
+            padding: 12px 28px 8px;
+            flex-wrap: wrap;
+        }
+        .lang-tab {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-tab:hover { border-color: var(--accent); color: var(--text); }
+        .lang-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        /* Speed / controls */
+        .controls {
+            display: flex;
+            gap: 8px;
+            padding: 8px 28px 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .controls label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        .controls input[type="range"] {
+            width: 120px;
+            accent-color: var(--accent);
+        }
+
+        /* ======================================================
+           #1 — Discrete Ticker (單則完全滑過型)
+           ====================================================== */
+        .marquee-discrete {
+            display: flex;
+            align-items: center;
+            height: 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        .marquee-discrete .item {
+            position: absolute;
+            white-space: nowrap;
+            padding: 0 28px;
+            font-size: 1rem;
+            will-change: transform;
+        }
+
+        /* ======================================================
+           #2 — Continuous String (連續字串型)
+           ====================================================== */
+        .marquee-continuous {
+            display: flex;
+            align-items: center;
+            height: 56px;
+            overflow: hidden;
+        }
+        .marquee-continuous .track {
+            display: flex;
+            white-space: nowrap;
+            will-change: transform;
+        }
+        .marquee-continuous .track .segment {
+            display: inline-flex;
+            align-items: center;
+            gap: 32px;
+            padding-right: 32px;
+            font-size: 1rem;
+        }
+        .marquee-continuous .track .segment .dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+        }
+
+        /* ======================================================
+           #3 — Seamless Loop (無縫銜接型)
+           ====================================================== */
+        .marquee-seamless {
+            display: flex;
+            align-items: center;
+            height: 56px;
+            overflow: hidden;
+        }
+        .marquee-seamless .track {
+            display: flex;
+            white-space: nowrap;
+            animation: seamlessScroll var(--duration, 20s) linear infinite;
+        }
+        .marquee-seamless .track .segment {
+            display: inline-flex;
+            align-items: center;
+            gap: 48px;
+            padding-right: 48px;
+            font-size: 1rem;
+        }
+        @keyframes seamlessScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* ======================================================
+           #4 — Vertical Slide Up (垂直滯留滑動型)
+           ====================================================== */
+        .marquee-vslide {
+            height: 72px;
+            overflow: hidden;
+            padding: 0 28px;
+        }
+        .marquee-vslide .track {
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            width: 100%;
+        }
+        .marquee-vslide .item {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        /* ======================================================
+           #5 — Bounce (彈跳來回型)
+           ====================================================== */
+        .marquee-bounce {
+            height: 56px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .marquee-bounce .item {
+            position: absolute;
+            white-space: nowrap;
+            font-size: 1rem;
+            will-change: transform;
+        }
+
+        /* ======================================================
+           #6 — Typewriter (逐字顯現型)
+           ====================================================== */
+        .marquee-typewriter {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            font-size: 1rem;
+            font-family: 'Inter', 'Noto Sans TC', monospace;
+        }
+        .marquee-typewriter .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: var(--accent);
+            margin-left: 2px;
+            animation: blink 0.6s step-end infinite;
+            vertical-align: text-bottom;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* ======================================================
+           #7 — Vertical Continuous Scroll (垂直連續滾動型)
+           ====================================================== */
+        .marquee-vscroll {
+            height: 160px;
+            overflow: hidden;
+            position: relative;
+        }
+        .marquee-vscroll .track {
+            will-change: transform;
+        }
+        .marquee-vscroll .item {
+            padding: 10px 28px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .marquee-vscroll::before,
+        .marquee-vscroll::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
+            height: 32px;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .marquee-vscroll::before {
+            top: 0;
+            background: linear-gradient(to bottom, var(--marquee-bg), transparent);
+        }
+        .marquee-vscroll::after {
+            bottom: 0;
+            background: linear-gradient(to top, var(--marquee-bg), transparent);
+        }
+
+        /* ======================================================
+           #8 — Split-Flap / Flip Board (翻牌型)
+           ====================================================== */
+        .marquee-flip {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 28px;
+            perspective: 600px;
+        }
+        .flip-container {
+            position: relative;
+            height: 52px;
+            overflow: hidden;
+            width: 100%;
+            text-align: center;
+        }
+        .flip-item {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            backface-visibility: hidden;
+        }
+        .flip-item.current {
+            animation: none;
+        }
+        .flip-item.flip-out {
+            animation: flipOut 0.6s ease-in forwards;
+        }
+        .flip-item.flip-in {
+            animation: flipIn 0.6s ease-out forwards;
+        }
+        @keyframes flipOut {
+            0% { transform: rotateX(0deg); opacity: 1; }
+            100% { transform: rotateX(-90deg); opacity: 0; }
+        }
+        @keyframes flipIn {
+            0% { transform: rotateX(90deg); opacity: 0; }
+            100% { transform: rotateX(0deg); opacity: 1; }
+        }
+
+        /* ======================================================
+           #9 — Crossfade (淡入淡出型)
+           ====================================================== */
+        .marquee-fade {
+            height: 56px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+        }
+        .marquee-fade .item {
+            position: absolute;
+            left: 28px; right: 28px;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        .marquee-fade .item.active {
+            opacity: 1;
+        }
+
+        /* ======================================================
+           #10 — Slide & Replace (滑入覆蓋型)
+           ====================================================== */
+        .marquee-slide-replace {
+            height: 56px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+        .marquee-slide-replace .item {
+            position: absolute;
+            left: 0; right: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            font-size: 1rem;
+            will-change: transform;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        opacity 0.5s ease;
+        }
+
+        /* ===== RTL support ===== */
+        [dir="rtl"] .marquee-discrete .item,
+        [dir="rtl"] .marquee-bounce .item {
+            direction: rtl;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 640px) {
+            .page-header { padding: 40px 16px 28px; }
+            .page-header h1 { font-size: 1.6rem; }
+            .page-header p { font-size: 0.9rem; }
+            .showcase { gap: 32px; padding: 24px 12px 60px; }
+            .card-head { padding: 16px 16px 12px; }
+            .card-head h2 { font-size: 1.1rem; }
+            .card-head .en { font-size: 0.8rem; }
+            .card-desc { padding: 0 16px 12px; font-size: 0.85rem; }
+            .lang-tabs { padding: 10px 16px 6px; gap: 4px; }
+            .lang-tab { font-size: 0.8rem; padding: 6px 14px; min-height: 36px; }
+            .controls { padding: 6px 16px 10px; }
+
+            /* Marquee text sizes — prevent shrinking */
+            .marquee-discrete .item,
+            .marquee-continuous .track .segment,
+            .marquee-seamless .track .segment,
+            .marquee-vslide .item,
+            .marquee-bounce .item,
+            .marquee-typewriter,
+            .marquee-vscroll .item,
+            .flip-item,
+            .marquee-fade .item,
+            .marquee-slide-replace .item {
+                font-size: 0.95rem;
+            }
+
+            /* Padding adjustments for marquee items */
+            .marquee-discrete .item { padding: 0 16px; }
+            .marquee-vslide { padding: 0 16px; }
+            .marquee-typewriter { padding: 0 16px; }
+            .marquee-flip { padding: 0 16px; }
+            .marquee-fade { padding: 0 16px; }
+            .marquee-fade .item { left: 16px; right: 16px; }
+            .marquee-slide-replace .item { padding: 0 16px; }
+            .marquee-vscroll .item { padding: 10px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="page-header">
+    <h1>跑馬燈展示 Marquee Showcase</h1>
+    <p>10 種跑馬燈樣式 × 多語系文字量測試</p>
+</header>
+
+<main class="showcase">
+
+    <!-- ============ #1 Discrete Ticker ============ -->
+    <section class="card" id="card-1">
+        <div class="card-head">
+            <span class="num">#1</span>
+            <h2>單則完全滑過型</h2>
+            <span class="en">Discrete Ticker</span>
+        </div>
+        <div class="card-desc">每則訊息從右側滑入，完整通過可視區域後，下一則才接續出現。適合通知、公告場景。</div>
+        <div class="lang-tabs" data-target="marquee1">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-discrete" id="marquee1"></div>
+        </div>
+    </section>
+
+    <!-- ============ #2 Continuous String ============ -->
+    <section class="card" id="card-2">
+        <div class="card-head">
+            <span class="num">#2</span>
+            <h2>連續字串型</h2>
+            <span class="en">Continuous String</span>
+        </div>
+        <div class="card-desc">所有訊息串成一條長字串，以固定速度持續滾動，訊息間用分隔符號區隔。尾端結束後才從頭重來。</div>
+        <div class="lang-tabs" data-target="marquee2">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-continuous" id="marquee2"></div>
+        </div>
+    </section>
+
+    <!-- ============ #3 Seamless Loop ============ -->
+    <section class="card" id="card-3">
+        <div class="card-head">
+            <span class="num">#3</span>
+            <h2>無縫銜接型</h2>
+            <span class="en">Seamless Loop</span>
+        </div>
+        <div class="card-desc">內容複製兩份首尾相接，滾動至一半時重置位置，實現永不間斷的視覺連續滾動。最常見的跑馬燈做法。</div>
+        <div class="lang-tabs" data-target="marquee3">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="controls">
+            <label>速度：</label>
+            <input type="range" min="5" max="60" value="20" id="speed3">
+            <span id="speed3-val">20s</span>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-seamless" id="marquee3"></div>
+        </div>
+    </section>
+
+    <!-- ============ #4 Vertical Slide Up ============ -->
+    <section class="card" id="card-4">
+        <div class="card-head">
+            <span class="num">#4</span>
+            <h2>垂直滯留滑動型</h2>
+            <span class="en">Vertical Slide Up</span>
+        </div>
+        <div class="card-desc">每組訊息停留一段時間後向上滑走，下一組接替顯示。文字過長時自動斷行，適合較長的公告文字。</div>
+        <div class="lang-tabs" data-target="marquee4">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-vslide" id="marquee4"></div>
+        </div>
+    </section>
+
+    <!-- ============ #5 Bounce ============ -->
+    <section class="card" id="card-5">
+        <div class="card-head">
+            <span class="num">#5</span>
+            <h2>彈跳來回型</h2>
+            <span class="en">Bounce</span>
+        </div>
+        <div class="card-desc">文字在容器內左右彈跳來回移動，碰到邊界便反彈。當文字短於容器寬度時也能確保動態感。</div>
+        <div class="lang-tabs" data-target="marquee5">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-bounce" id="marquee5"></div>
+        </div>
+    </section>
+
+    <!-- ============ #6 Typewriter ============ -->
+    <section class="card" id="card-6">
+        <div class="card-head">
+            <span class="num">#6</span>
+            <h2>逐字顯現型</h2>
+            <span class="en">Typewriter</span>
+        </div>
+        <div class="card-desc">文字逐字打出，播完後短暫停留再擦除，換下一則。帶有機械感的閃爍游標效果。</div>
+        <div class="lang-tabs" data-target="marquee6">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-typewriter" id="marquee6"><span class="text"></span><span class="cursor"></span></div>
+        </div>
+    </section>
+
+    <!-- ============ #7 Vertical Continuous Scroll ============ -->
+    <section class="card" id="card-7">
+        <div class="card-head">
+            <span class="num">#7</span>
+            <h2>垂直連續滾動型</h2>
+            <span class="en">Vertical Continuous Scroll</span>
+        </div>
+        <div class="card-desc">多筆訊息由下往上持續滾動，上下邊緣有淡出遮罩。適合即時動態、股票報價、聊天室風格。</div>
+        <div class="lang-tabs" data-target="marquee7">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-vscroll" id="marquee7"></div>
+        </div>
+    </section>
+
+    <!-- ============ #8 Split-Flap / Flip Board ============ -->
+    <section class="card" id="card-8">
+        <div class="card-head">
+            <span class="num">#8</span>
+            <h2>翻牌型</h2>
+            <span class="en">Split-Flap / Flip Board</span>
+        </div>
+        <div class="card-desc">模擬機場航班看板的翻頁效果，當前文字向下翻轉消失，新文字從上方翻入。適合重要資訊展示。</div>
+        <div class="lang-tabs" data-target="marquee8">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-flip" id="marquee8">
+                <div class="flip-container"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ #9 Crossfade ============ -->
+    <section class="card" id="card-9">
+        <div class="card-head">
+            <span class="num">#9</span>
+            <h2>淡入淡出型</h2>
+            <span class="en">Crossfade</span>
+        </div>
+        <div class="card-desc">當前文字淡出，下一則淡入，沒有方向性移動。最安靜、低調的切換方式，適合優雅風格。</div>
+        <div class="lang-tabs" data-target="marquee9">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-fade" id="marquee9"></div>
+        </div>
+    </section>
+
+    <!-- ============ #10 Slide & Replace ============ -->
+    <section class="card" id="card-10">
+        <div class="card-head">
+            <span class="num">#10</span>
+            <h2>滑入覆蓋型</h2>
+            <span class="en">Slide &amp; Replace</span>
+        </div>
+        <div class="card-desc">新訊息從右側滑入，將舊訊息推往左側滑出。定點替換，不像 #1 那樣文字完全通過整個畫面。</div>
+        <div class="lang-tabs" data-target="marquee10">
+            <button class="lang-tab active" data-lang="zh">中文</button>
+            <button class="lang-tab" data-lang="en">English</button>
+            <button class="lang-tab" data-lang="de">Deutsch</button>
+            <button class="lang-tab" data-lang="ar">العربية</button>
+            <button class="lang-tab" data-lang="th">ไทย</button>
+            <button class="lang-tab" data-lang="ja">日本語</button>
+        </div>
+        <div class="demo-area">
+            <div class="marquee-slide-replace" id="marquee10"></div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+// ============================
+// Multilingual sample data
+// ============================
+const MESSAGES = {
+    zh: [
+        '歡迎來到我們的平台！最新活動現正熱烈進行中',
+        '系統維護通知：今晚 23:00 至明日 02:00 將進行例行維護',
+        '新功能上線！快來體驗全新的個人化推薦系統',
+        '限時優惠：全站商品享 85 折，活動倒數 3 天',
+        '重要公告：用戶服務條款已更新，請查閱最新版本',
+        '恭喜用戶 Sandy 獲得本月最佳貢獻者獎！',
+    ],
+    en: [
+        'Welcome to our platform! New events are happening now',
+        'Maintenance notice: Scheduled downtime tonight from 23:00 to 02:00 UTC',
+        'New feature launched! Try our brand-new personalized recommendation engine',
+        'Limited-time offer: 15% off everything — only 3 days left',
+        'Important: Our Terms of Service have been updated. Please review the latest version',
+        'Congratulations to Sandy for winning Contributor of the Month!',
+    ],
+    de: [
+        'Willkommen auf unserer Plattform! Neue Veranstaltungen finden jetzt statt',
+        'Wartungshinweis: Geplante Ausfallzeit heute Nacht von 23:00 bis 02:00 Uhr',
+        'Neue Funktion veröffentlicht! Testen Sie unsere brandneue personalisierte Empfehlungsmaschine',
+        'Zeitlich begrenztes Angebot: 15 % Rabatt auf alles — nur noch 3 Tage',
+        'Wichtig: Unsere Allgemeinen Geschäftsbedingungen wurden aktualisiert. Bitte überprüfen Sie die neueste Fassung',
+        'Herzlichen Glückwunsch an Sandy zur Auszeichnung als Mitwirkender des Monats!',
+    ],
+    ar: [
+        'مرحباً بكم في منصتنا! الفعاليات الجديدة تجري الآن',
+        'إشعار صيانة: توقف مجدول الليلة من الساعة 23:00 إلى 02:00 بالتوقيت العالمي',
+        'ميزة جديدة! جرّبوا محرك التوصيات الشخصية الجديد كلياً',
+        'عرض لفترة محدودة: خصم 15% على كل شيء — تبقى 3 أيام فقط',
+        'هام: تم تحديث شروط الخدمة الخاصة بنا. يرجى مراجعة أحدث إصدار',
+        'تهانينا لساندي على الفوز بجائزة المساهم المتميز لهذا الشهر!',
+    ],
+    th: [
+        'ยินดีต้อนรับสู่แพลตฟอร์มของเรา! กิจกรรมใหม่กำลังดำเนินอยู่',
+        'แจ้งซ่อมบำรุง: ระบบจะหยุดทำงานคืนนี้ 23:00 - 02:00 น.',
+        'ฟีเจอร์ใหม่เปิดตัวแล้ว! ลองใช้ระบบแนะนำส่วนบุคคลแบบใหม่',
+        'โปรโมชั่นจำกัดเวลา: ลด 15% ทุกชิ้น — เหลืออีก 3 วันเท่านั้น',
+        'สำคัญ: เงื่อนไขการให้บริการได้รับการอัปเดตแล้ว กรุณาตรวจสอบเวอร์ชันล่าสุด',
+        'ขอแสดงความยินดีกับแซนดี้ที่ได้รับรางวัลผู้มีส่วนร่วมยอดเยี่ยมประจำเดือน!',
+    ],
+    ja: [
+        'プラットフォームへようこそ！最新イベント開催中',
+        'メンテナンスのお知らせ：本日23:00～翌02:00に定期メンテナンスを実施します',
+        '新機能リリース！パーソナライズされたレコメンドエンジンをお試しください',
+        '期間限定：全品15%オフ — 残り3日',
+        '重要：利用規約が更新されました。最新版をご確認ください',
+        'Sandyさん、今月のベストコントリビューター賞おめでとうございます！',
+    ],
+};
+
+function isRTL(lang) { return lang === 'ar'; }
+function getMessages(lang) { return MESSAGES[lang] || MESSAGES.zh; }
+
+// ============================
+// Language tab switching
+// ============================
+document.querySelectorAll('.lang-tabs').forEach(tabGroup => {
+    tabGroup.addEventListener('click', e => {
+        const btn = e.target.closest('.lang-tab');
+        if (!btn) return;
+        tabGroup.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        const lang = btn.dataset.lang;
+        const targetId = tabGroup.dataset.target;
+        // Dispatch custom event
+        document.getElementById(targetId)?.dispatchEvent(
+            new CustomEvent('langchange', { detail: { lang } })
+        );
+    });
+});
+
+// ============================
+// #1 — Discrete Ticker
+// ============================
+(function initDiscrete() {
+    const el = document.getElementById('marquee1');
+    let lang = 'zh';
+    let msgs, idx = 0, animFrame;
+
+    function setup() {
+        msgs = getMessages(lang);
+        idx = 0;
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        runNext();
+    }
+
+    function runNext() {
+        cancelAnimationFrame(animFrame);
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.textContent = msgs[idx % msgs.length];
+        el.innerHTML = '';
+        el.appendChild(item);
+
+        const containerW = el.offsetWidth;
+        const itemW = item.offsetWidth;
+        let x = containerW;
+        const speed = 2; // px per frame
+
+        function tick() {
+            x -= speed;
+            item.style.transform = `translateX(${x}px)`;
+            if (x + itemW > 0) {
+                animFrame = requestAnimationFrame(tick);
+            } else {
+                idx++;
+                runNext();
+            }
+        }
+        animFrame = requestAnimationFrame(tick);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; setup(); });
+    setup();
+})();
+
+// ============================
+// #2 — Continuous String
+// ============================
+(function initContinuous() {
+    const el = document.getElementById('marquee2');
+    let lang = 'zh';
+    let animFrame, x = 0;
+
+    function buildTrack() {
+        const msgs = getMessages(lang);
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        const track = document.createElement('div');
+        track.className = 'track';
+        const seg = document.createElement('div');
+        seg.className = 'segment';
+        msgs.forEach((m, i) => {
+            if (i > 0) {
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                seg.appendChild(dot);
+            }
+            const span = document.createElement('span');
+            span.textContent = m;
+            seg.appendChild(span);
+        });
+        track.appendChild(seg);
+        el.appendChild(track);
+        x = el.offsetWidth;
+        cancelAnimationFrame(animFrame);
+        animate(track, seg);
+    }
+
+    function animate(track, seg) {
+        const segW = seg.offsetWidth;
+        function tick() {
+            x -= 1.5;
+            if (x < -segW) x = el.offsetWidth;
+            track.style.transform = `translateX(${x}px)`;
+            animFrame = requestAnimationFrame(tick);
+        }
+        animFrame = requestAnimationFrame(tick);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; buildTrack(); });
+    buildTrack();
+})();
+
+// ============================
+// #3 — Seamless Loop (CSS animation)
+// ============================
+(function initSeamless() {
+    const el = document.getElementById('marquee3');
+    const speedInput = document.getElementById('speed3');
+    const speedVal = document.getElementById('speed3-val');
+    let lang = 'zh';
+
+    function build() {
+        const msgs = getMessages(lang);
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        const track = document.createElement('div');
+        track.className = 'track';
+        // Create 2 identical segments for seamless effect
+        for (let copy = 0; copy < 2; copy++) {
+            const seg = document.createElement('div');
+            seg.className = 'segment';
+            msgs.forEach(m => {
+                const span = document.createElement('span');
+                span.textContent = m;
+                seg.appendChild(span);
+            });
+            track.appendChild(seg);
+        }
+        track.style.setProperty('--duration', speedInput.value + 's');
+        el.appendChild(track);
+    }
+
+    speedInput.addEventListener('input', () => {
+        speedVal.textContent = speedInput.value + 's';
+        const track = el.querySelector('.track');
+        if (track) track.style.setProperty('--duration', speedInput.value + 's');
+    });
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; build(); });
+    build();
+})();
+
+// ============================
+// #4 — Vertical Slide Up
+// ============================
+(function initVSlide() {
+    const el = document.getElementById('marquee4');
+    let lang = 'zh';
+    let timer, idx = 0;
+
+    function build() {
+        clearInterval(timer);
+        const msgs = getMessages(lang);
+        idx = 0;
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        const track = document.createElement('div');
+        track.className = 'track';
+        msgs.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'item';
+            item.textContent = m;
+            track.appendChild(item);
+        });
+        el.appendChild(track);
+
+        timer = setInterval(() => {
+            idx++;
+            if (idx >= msgs.length) idx = 0;
+            track.style.transform = `translateY(-${idx * 72}px)`;
+        }, 3000);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; build(); });
+    build();
+})();
+
+// ============================
+// #5 — Bounce
+// ============================
+(function initBounce() {
+    const el = document.getElementById('marquee5');
+    let lang = 'zh';
+    let animFrame, msgIdx = 0;
+
+    function setup() {
+        cancelAnimationFrame(animFrame);
+        const msgs = getMessages(lang);
+        msgIdx = 0;
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        runItem(msgs);
+    }
+
+    function runItem(msgs) {
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.textContent = msgs[msgIdx % msgs.length];
+        el.innerHTML = '';
+        el.appendChild(item);
+
+        const containerW = el.offsetWidth;
+        const itemW = item.offsetWidth;
+        let x = 0, dir = 1, bounces = 0;
+        const speed = 1.5;
+        const maxBounces = 4;
+
+        function tick() {
+            x += speed * dir;
+            if (x + itemW >= containerW) { dir = -1; bounces++; }
+            if (x <= 0) { dir = 1; bounces++; }
+            item.style.transform = `translateX(${x}px)`;
+            if (bounces < maxBounces) {
+                animFrame = requestAnimationFrame(tick);
+            } else {
+                msgIdx++;
+                setTimeout(() => runItem(msgs), 200);
+            }
+        }
+        animFrame = requestAnimationFrame(tick);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; setup(); });
+    setup();
+})();
+
+// ============================
+// #6 — Typewriter
+// ============================
+(function initTypewriter() {
+    const el = document.getElementById('marquee6');
+    const textEl = el.querySelector('.text');
+    let lang = 'zh';
+    let timer, msgIdx = 0;
+
+    function setup() {
+        clearTimeout(timer);
+        msgIdx = 0;
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        typeNext();
+    }
+
+    function typeNext() {
+        const msgs = getMessages(lang);
+        const msg = msgs[msgIdx % msgs.length];
+        let i = 0;
+        textEl.textContent = '';
+
+        function typeChar() {
+            if (i < msg.length) {
+                textEl.textContent += msg[i];
+                i++;
+                timer = setTimeout(typeChar, lang === 'zh' || lang === 'ja' ? 80 : 40);
+            } else {
+                // Pause then erase
+                timer = setTimeout(erase, 2000);
+            }
+        }
+
+        function erase() {
+            const txt = textEl.textContent;
+            if (txt.length > 0) {
+                textEl.textContent = txt.slice(0, -1);
+                timer = setTimeout(erase, 25);
+            } else {
+                msgIdx++;
+                timer = setTimeout(typeNext, 400);
+            }
+        }
+
+        typeChar();
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; setup(); });
+    setup();
+})();
+
+// ============================
+// #7 — Vertical Continuous Scroll
+// ============================
+(function initVScroll() {
+    const el = document.getElementById('marquee7');
+    let lang = 'zh';
+    let animFrame, y = 0;
+
+    function build() {
+        cancelAnimationFrame(animFrame);
+        const msgs = getMessages(lang);
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        const track = document.createElement('div');
+        track.className = 'track';
+        // Duplicate items for seamless vertical loop
+        const allMsgs = [...msgs, ...msgs, ...msgs];
+        allMsgs.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'item';
+            item.textContent = m;
+            track.appendChild(item);
+        });
+        el.appendChild(track);
+        y = 0;
+
+        const singleHeight = track.scrollHeight / 3;
+
+        function tick() {
+            y -= 0.5;
+            if (Math.abs(y) >= singleHeight) y = 0;
+            track.style.transform = `translateY(${y}px)`;
+            animFrame = requestAnimationFrame(tick);
+        }
+        animFrame = requestAnimationFrame(tick);
+    }
+
+    // Re-add gradient overlays
+    function addOverlays() {
+        // CSS pseudo-elements handle this
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; build(); });
+    build();
+})();
+
+// ============================
+// #8 — Flip Board
+// ============================
+(function initFlip() {
+    const container = document.querySelector('#marquee8 .flip-container');
+    const el = document.getElementById('marquee8');
+    let lang = 'zh';
+    let timer, idx = 0;
+
+    function setup() {
+        clearInterval(timer);
+        idx = 0;
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        const msgs = getMessages(lang);
+        container.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'flip-item current';
+        item.textContent = msgs[0];
+        container.appendChild(item);
+
+        timer = setInterval(() => {
+            const current = container.querySelector('.flip-item.current');
+            if (!current) return;
+            current.classList.remove('current');
+            current.classList.add('flip-out');
+
+            idx = (idx + 1) % msgs.length;
+            const next = document.createElement('div');
+            next.className = 'flip-item flip-in';
+            next.textContent = msgs[idx];
+            container.appendChild(next);
+
+            setTimeout(() => {
+                current.remove();
+                next.classList.remove('flip-in');
+                next.classList.add('current');
+            }, 650);
+        }, 3000);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; setup(); });
+    setup();
+})();
+
+// ============================
+// #9 — Crossfade
+// ============================
+(function initFade() {
+    const el = document.getElementById('marquee9');
+    let lang = 'zh';
+    let timer, idx = 0;
+
+    function build() {
+        clearInterval(timer);
+        idx = 0;
+        const msgs = getMessages(lang);
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+        msgs.forEach((m, i) => {
+            const item = document.createElement('div');
+            item.className = 'item' + (i === 0 ? ' active' : '');
+            item.textContent = m;
+            el.appendChild(item);
+        });
+
+        timer = setInterval(() => {
+            const items = el.querySelectorAll('.item');
+            items[idx].classList.remove('active');
+            idx = (idx + 1) % msgs.length;
+            items[idx].classList.add('active');
+        }, 3000);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; build(); });
+    build();
+})();
+
+// ============================
+// #10 — Slide & Replace
+// ============================
+(function initSlideReplace() {
+    const el = document.getElementById('marquee10');
+    let lang = 'zh';
+    let timer, idx = 0;
+
+    function build() {
+        clearInterval(timer);
+        idx = 0;
+        const msgs = getMessages(lang);
+        el.innerHTML = '';
+        el.dir = isRTL(lang) ? 'rtl' : 'ltr';
+
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.textContent = msgs[0];
+        item.style.transform = 'translateX(0)';
+        item.style.opacity = '1';
+        el.appendChild(item);
+
+        timer = setInterval(() => {
+            const current = el.querySelector('.item');
+            if (!current) return;
+            // Slide out current
+            current.style.transform = 'translateX(-100%)';
+            current.style.opacity = '0';
+
+            idx = (idx + 1) % msgs.length;
+            const next = document.createElement('div');
+            next.className = 'item';
+            next.textContent = msgs[idx];
+            next.style.transform = 'translateX(100%)';
+            next.style.opacity = '0';
+            el.appendChild(next);
+
+            // Trigger reflow then animate in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    next.style.transform = 'translateX(0)';
+                    next.style.opacity = '1';
+                });
+            });
+
+            setTimeout(() => current.remove(), 600);
+        }, 3000);
+    }
+
+    el.addEventListener('langchange', e => { lang = e.detail.lang; build(); });
+    build();
+})();
+</script>
+
+</body>
+</html>

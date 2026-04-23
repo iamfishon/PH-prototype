@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Template</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+      background: #0e0d1b;
+      color: #e0e0e0;
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: #13122a;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #1f1e38;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 16px 16px 8px;
+      font-size: 22px;
+      font-weight: 900;
+      background: linear-gradient(90deg, #f472b6, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+    .sidebar-user {
+      padding: 0 16px 12px;
+      font-size: 11px;
+      color: #888;
+    }
+    .nav-group { border-top: 1px solid #1f1e38; }
+    .nav-group-label {
+      padding: 10px 16px 6px;
+      font-size: 13px;
+      color: #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .nav-group-label:hover { color: #fff; }
+    .nav-group-label .arrow { font-size: 10px; transition: transform .2s; }
+    .nav-group-label.open .arrow { transform: rotate(180deg); }
+    .nav-items { display: flex; flex-direction: column; }
+    .nav-item {
+      padding: 8px 16px 8px 24px;
+      font-size: 13px;
+      color: #bbb;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .nav-item:hover { background: #1c1b35; color: #fff; }
+    .nav-item.active {
+      background: #ec4899;
+      color: #fff;
+      border-radius: 0;
+    }
+    .sidebar-version {
+      margin-top: auto;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      position: fixed;
+      top: 0; left: 200px; right: 0;
+      height: 50px;
+      background: #13122a;
+      border-bottom: 1px solid #1f1e38;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 20px;
+      gap: 18px;
+      z-index: 99;
+    }
+    .topbar-icon {
+      width: 22px; height: 22px;
+      color: #aaa;
+      cursor: pointer;
+      transition: color .15s;
+    }
+    .topbar-icon:hover { color: #fff; }
+
+    /* ── Main Content ── */
+    .main {
+      margin-left: 200px;
+      padding-top: 50px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .page { padding: 24px; flex: 1; }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .breadcrumb a:hover { color: #ec4899; }
+    .breadcrumb .sep { color: #555; }
+    .breadcrumb .current { color: #ec4899; }
+
+    /* ── Page Header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .page-title { font-size: 22px; font-weight: 700; color: #fff; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      transition: opacity .15s, filter .15s;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn-primary { background: #ec4899; color: #fff; }
+    .btn-purple { background: #7c3aed; color: #fff; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #7c3aed;
+      color: #a78bfa;
+    }
+    .btn-danger { background: #b91c1c; color: #fff; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-group { display: flex; gap: 8px; }
+
+    /* ── Card / Panel ── */
+    .card {
+      background: #1a1930;
+      border: 1px solid #2a2848;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+
+    /* ── Search / Filter Section ── */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
+    .filter-field { display: flex; flex-direction: column; gap: 5px; }
+    .filter-label { font-size: 12px; color: #aaa; }
+    .filter-toggle {
+      margin-left: auto;
+      padding: 6px 14px;
+      background: #2d2b52;
+      border: none;
+      border-radius: 6px;
+      color: #a78bfa;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .filter-toggle:hover { background: #3a3770; }
+    .filter-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+    /* ── Form Controls ── */
+    .input, .select {
+      background: #0e0d1b;
+      border: 1px solid #2a2848;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 7px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .input:focus, .select:focus { border-color: #7c3aed; }
+    .input-icon { position: relative; }
+    .input-icon .icon {
+      position: absolute;
+      left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: #666;
+      font-size: 14px;
+    }
+    .input-icon .input { padding-left: 30px; }
+    .input-with-btn { display: flex; gap: 6px; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: #1f1d38; }
+    thead th {
+      padding: 11px 14px;
+      text-align: left;
+      color: #bbb;
+      font-weight: 600;
+      white-space: nowrap;
+      border-bottom: 1px solid #2a2848;
+    }
+    tbody tr { border-bottom: 1px solid #1f1e38; transition: background .12s; }
+    tbody tr:hover { background: #1c1b35; }
+    tbody td { padding: 10px 14px; vertical-align: middle; color: #ccc; }
+    .td-img img {
+      width: 56px; height: 56px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #2a2848;
+    }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-green { color: #4ade80; }
+    .badge-orange { color: #fb923c; }
+    .badge-red {
+      background: #ef4444;
+      color: #fff;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 12px;
+    }
+    .badge-gray { color: #888; }
+
+    /* ── Order Badge ── */
+    .order-badge {
+      background: #7c3aed;
+      color: #fff;
+      border-radius: 6px;
+      min-width: 36px;
+      text-align: center;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 4px 6px;
+    }
+    .order-badge select {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* ── Action Icons ── */
+    .action-cell { display: flex; gap: 12px; align-items: center; white-space: nowrap; }
+    .action-link { color: #a78bfa; font-size: 12px; cursor: pointer; }
+    .action-link:hover { color: #ec4899; }
+    .action-delete { color: #ef4444; font-size: 12px; cursor: pointer; }
+    .action-delete:hover { color: #fca5a5; }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #888;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pagination-nav { display: flex; gap: 6px; align-items: center; }
+    .pagination-nav button {
+      padding: 5px 12px;
+      background: #1f1d38;
+      border: 1px solid #2a2848;
+      border-radius: 5px;
+      color: #ccc;
+      font-size: 12px;
+    }
+    .pagination-nav button:hover { background: #2d2b52; }
+    .pagination-goto { display: flex; align-items: center; gap: 6px; }
+    .pagination-goto input {
+      width: 60px;
+      background: #0e0d1b;
+      border: 1px solid #2a2848;
+      border-radius: 5px;
+      color: #e0e0e0;
+      padding: 5px 8px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* ── Language Tabs ── */
+    .lang-tabs { display: flex; gap: 0; margin-bottom: 20px; }
+    .lang-tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      background: #2d2b52;
+      color: #bbb;
+      border: none;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .lang-tab:first-child { border-radius: 8px 0 0 8px; }
+    .lang-tab:last-child  { border-radius: 0 8px 8px 0; }
+    .lang-tab.active { background: #ec4899; color: #fff; }
+    .lang-tab:hover:not(.active) { background: #3a3770; color: #fff; }
+
+    /* ── Edit Page ── */
+    .edit-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 24px; }
+
+    /* ── Image Upload Area ── */
+    .image-upload-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .image-card {
+      position: relative;
+      width: 120px; height: 120px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #2a2848;
+      background: #0e0d1b;
+    }
+    .image-card img { width: 100%; height: 100%; object-fit: cover; }
+    .image-card .img-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 4px;
+    }
+    .img-btn {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .img-btn-move { background: rgba(255,255,255,0.15); color: #fff; }
+    .img-btn-delete { background: rgba(220,38,38,0.8); color: #fff; }
+    .image-add {
+      width: 120px; height: 120px;
+      border: 2px dashed #2a2848;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #555; font-size: 28px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .image-add:hover { border-color: #7c3aed; color: #7c3aed; }
+
+    /* ── Schedule Section ── */
+    .schedule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .schedule-meta { font-size: 12px; color: #666; margin-bottom: 12px; }
+    .schedule-options { display: flex; flex-direction: column; gap: 14px; }
+    .schedule-option { display: flex; align-items: center; gap: 10px; }
+    .schedule-option label { font-size: 13px; color: #ccc; cursor: pointer; }
+    .radio-custom {
+      width: 16px; height: 16px;
+      accent-color: #ec4899;
+      cursor: pointer;
+    }
+    .schedule-times {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-left: 26px;
+      margin-top: 8px;
+    }
+    .schedule-time-field { display: flex; flex-direction: column; gap: 4px; }
+    .schedule-time-label { font-size: 11px; color: #888; }
+    .schedule-time-value {
+      background: #0e0d1b;
+      border: 1px solid #2a2848;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: #ccc;
+      outline: none;
+    }
+    .schedule-time-value:focus { border-color: #7c3aed; }
+
+    /* ── Page Footer (Edit) ── */
+    .edit-footer {
+      display: flex;
+      gap: 10px;
+      padding: 20px 24px;
+      border-top: 1px solid #1f1e38;
+      background: #0e0d1b;
+      position: sticky;
+      bottom: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Pkdyhorny</div>
+  <div class="sidebar-user">User ID: 1000007</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">遊戲資料 <span class="arrow">▼</span></div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label open">前台首頁 <span class="arrow">▼</span></div>
+    <div class="nav-items">
+      <div class="nav-item active" onclick="showPage('list')">首頁Banner</div>
+      <div class="nav-item">主打遊戲</div>
+      <div class="nav-item">最新活動</div>
+      <div class="nav-item">最新消息</div>
+      <div class="nav-item">單機遊戲</div>
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">客服中心 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">會員中心 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">金流相關 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">代理中心 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">常用工具 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">廣告管理 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">信件中心 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">兌換碼管理 <span class="arrow">▼</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">成員與權限 <span class="arrow">▼</span></div>
+  </div>
+
+  <div class="sidebar-version">
+    版本號: v4.1.9<br>
+    發布時間: 2026-02-24T15:21:17<br>
+    環境: prod
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     TOP BAR
+═══════════════════════════════════════════ -->
+<div class="topbar">
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066
+         c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426
+         1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31
+         -2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35
+         0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724
+         1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0
+         001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07
+         2.572-1.065z"/>
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+  </svg>
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0
+         002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+  </svg>
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707
+         M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707"/>
+  </svg>
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M5.121 17.804A9 9 0 1118.88 6.196M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+  </svg>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- ─────────────────────────────────────
+       PAGE: LIST
+  ───────────────────────────────────── -->
+  <div id="page-list" class="page">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="#">🏠 首頁</a>
+      <span class="sep">›</span>
+      <a href="#">前台首頁</a>
+      <span class="sep">›</span>
+      <span class="current">首頁Banner</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">首頁Banner</h1>
+      <div class="btn-group">
+        <button class="btn btn-purple" onclick="showPage('edit')">新建資料</button>
+        <button class="btn btn-purple">清除快取</button>
+        <button class="btn btn-purple">刷新</button>
+      </div>
+    </div>
+
+    <!-- Search / Filter -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <span style="font-size:15px;font-weight:700;color:#fff;">搜尋與篩選</span>
+        <button class="filter-toggle">▲ 收合</button>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-field">
+          <span class="filter-label">名稱搜尋</span>
+          <div class="input-with-btn">
+            <div class="input-icon">
+              <span class="icon">🔍</span>
+              <input class="input" type="text" placeholder="" style="width:220px;" />
+            </div>
+            <button class="btn btn-purple btn-sm">搜尋</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-field">
+          <span class="filter-label">時間範圍</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <select class="select">
+              <option>建立時間</option>
+              <option>最後處理時間</option>
+            </select>
+            <input class="input" type="datetime-local" style="width:200px;" />
+            <span style="color:#555;">至</span>
+            <input class="input" type="datetime-local" style="width:200px;" />
+            <button class="btn btn-purple btn-sm">搜尋</button>
+          </div>
+        </div>
+        <div class="filter-field">
+          <span class="filter-label">前台顯示</span>
+          <select class="select">
+            <option>全部</option>
+            <option>顯示</option>
+            <option>不顯示</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-outline btn-sm">重置所有條件</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>排序</th>
+              <th>ID ↓</th>
+              <th>圖片</th>
+              <th>檔案名稱</th>
+              <th>顯示</th>
+              <th>建立時間</th>
+              <th>最後處理時間</th>
+              <th>最後處理人員</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="order-badge">
+                  <select><option>1</option><option>2</option><option>3</option></select>
+                  <span style="font-size:10px;color:#ccc;">▼</span>
+                </span>
+              </td>
+              <td>302</td>
+              <td class="td-img">
+                <img src="https://via.placeholder.com/56x56/1a1930/a78bfa?text=IMG" alt="img" />
+              </td>
+              <td>SD_社群_菁英封測開啟</td>
+              <td><span class="badge badge-orange">不顯示</span></td>
+              <td>2026/02/09 18:27:47</td>
+              <td>2026/02/26 16:56:28</td>
+              <td>1000020 &nbsp;<span style="color:#555;">👤</span></td>
+              <td>
+                <div class="action-cell">
+                  <span class="action-link" onclick="showPage('edit')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 資料軟刪</span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span class="order-badge">
+                  <select><option>4</option><option>1</option><option>2</option></select>
+                  <span style="font-size:10px;color:#ccc;">▼</span>
+                </span>
+              </td>
+              <td>261</td>
+              <td class="td-img">
+                <img src="https://via.placeholder.com/56x56/1a1930/4ade80?text=GIF" alt="img" />
+              </td>
+              <td>VK_GIF_蒼天燈祈願_1200x675_TC</td>
+              <td><span class="badge badge-green">顯示</span></td>
+              <td>2025/11/06 18:20:47</td>
+              <td>2026/03/12 16:54:38</td>
+              <td>1000020 &nbsp;<span style="color:#555;">👤</span></td>
+              <td>
+                <div class="action-cell">
+                  <span class="action-link" onclick="showPage('edit')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 資料軟刪</span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <span class="order-badge">
+                  <select><option>2</option><option>1</option><option>3</option></select>
+                  <span style="font-size:10px;color:#ccc;">▼</span>
+                </span>
+              </td>
+              <td>244</td>
+              <td class="td-img">
+                <img src="https://via.placeholder.com/56x56/1a1930/f472b6?text=GIF" alt="img" />
+              </td>
+              <td>KM_平台GIF_激釣！漁人節_02_TC</td>
+              <td><span class="badge badge-green">顯示</span></td>
+              <td>2025/09/24 17:50:29</td>
+              <td>2026/03/11 17:24:57</td>
+              <td>1000020 &nbsp;<span style="color:#555;">👤</span></td>
+              <td>
+                <div class="action-cell">
+                  <span class="action-link" onclick="showPage('edit')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 資料軟刪</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <div class="pagination-nav">
+          <button>首頁</button>
+          <button>&lt;</button>
+          <button>&gt;</button>
+          <button>末頁</button>
+        </div>
+        <span>Showing <strong>1 of 1</strong></span>
+        <div class="pagination-goto">
+          Go to page
+          <input type="number" value="1" min="1" />
+        </div>
+        <span>總件數: 6 &nbsp;|&nbsp; 當前件數: 6</span>
+      </div>
+    </div>
+  </div><!-- /page-list -->
+
+
+  <!-- ─────────────────────────────────────
+       PAGE: EDIT
+  ───────────────────────────────────── -->
+  <div id="page-edit" class="page" style="display:none;">
+    <h1 class="edit-title">首頁Banner_編輯頁</h1>
+
+    <!-- Language Tabs -->
+    <div class="lang-tabs">
+      <button class="lang-tab">英文</button>
+      <button class="lang-tab active">繁體中文</button>
+      <button class="lang-tab">日文</button>
+      <button class="lang-tab">韓文</button>
+      <button class="lang-tab">簡體中文</button>
+    </div>
+
+    <!-- Image Upload -->
+    <div class="card">
+      <div class="card-title">首頁Banner</div>
+      <div class="image-upload-grid">
+        <div class="image-card">
+          <img src="https://via.placeholder.com/120x120/1a1930/a78bfa?text=IMG" alt="banner" />
+          <div class="img-overlay">
+            <button class="img-btn img-btn-move">⊕</button>
+            <button class="img-btn img-btn-delete">🗑</button>
+          </div>
+        </div>
+        <div class="image-add">+</div>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card">
+      <div class="schedule-header">
+        <div class="card-title" style="margin-bottom:0;">開放排程設定</div>
+        <span class="badge badge-red">已過期</span>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#888;margin-top:-6px;margin-bottom:12px;">
+        下架時間已過，此排程已過期
+      </div>
+
+      <div class="schedule-meta">
+        <span style="color:#aaa;">創建時間</span><br>
+        2026/02/09 18:27:47
+      </div>
+
+      <div class="schedule-options">
+        <div class="schedule-option">
+          <input type="radio" name="publish" id="draft" class="radio-custom" />
+          <label for="draft">不開放（存成草稿）</label>
+        </div>
+
+        <div>
+          <div class="schedule-option">
+            <input type="radio" name="publish" id="open" class="radio-custom" checked />
+            <label for="open">開放</label>
+          </div>
+          <div class="schedule-times">
+            <div class="schedule-time-field">
+              <span class="schedule-time-label">上架時間</span>
+              <input class="schedule-time-value" type="datetime-local" value="2026-02-09T18:27" />
+            </div>
+            <div class="schedule-time-field">
+              <span class="schedule-time-label">下架時間</span>
+              <input class="schedule-time-value" type="datetime-local" value="2026-03-13T15:00" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Buttons -->
+    <div class="edit-footer">
+      <button class="btn btn-primary">儲存</button>
+      <button class="btn btn-purple" onclick="showPage('list')">取消</button>
+    </div>
+  </div><!-- /page-edit -->
+
+</div><!-- /main -->
+
+<script>
+  function showPage(name) {
+    document.getElementById('page-list').style.display = name === 'list' ? '' : 'none';
+    document.getElementById('page-edit').style.display = name === 'edit' ? '' : 'none';
+  }
+</script>
+</body>
+</html>

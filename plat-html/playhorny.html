@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayHorny | 可以瑟瑟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0d1b2a;
+            color: #f0f0f0;
+            overflow-x: hidden;
+          margin: 0;
+            /* 加入滿版底圖與漸層 */
+            background-image:
+                linear-gradient(to bottom,
+                    rgba(13, 27, 42, 0.4) 0%,
+                    rgba(13, 27, 42, 1) 800px,
+                    rgba(13, 27, 42, 1) 1600px,
+                    rgba(30, 50, 70, 1) 3000px,
+                    rgba(45, 70, 95, 1) 5000px
+                ),
+                url('https://p2.itc.cn/images01/20231223/6abea8d36664447f853ed400dfc8b337.png');
+            /*background-attachment: fixed;*/
+          background-repeat: no-repeat;
+            background-size: 100% auto;;
+            background-position: center top;
+        }
+
+        /* Riot 標題字體 */
+        h1, h2, h3, .brand-font {
+            font-family: 'Oswald', 'Noto Sans TC', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+      /* 卡片懸浮效果 */
+        .game-card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .game-card-hover:hover {
+            transform: translateY(-5px);
+        }
+
+        /* 260x148 比例容器 */
+        .ratio-260-148 {
+            aspect-ratio: 260 / 148;
+        }
+
+      .neon-text-purple {
+            color: #fff;
+            text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #bc13fe, 0 0 82px #bc13fe;
+            animation: pulsate 1.5s infinite alternate;
+        }
+
+
+      /* 智慧型 Header 樣式 */
+        #main-header {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+            will-change: transform, background-color;
+        }
+
+      /* Banner 滑動動畫容器 */
+        .carousel-track {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            height: 100%;
+        }
+
+        .banner-item {
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+
+
+      /* 智慧型 Mobile Bottom Nav 樣式 */
+        #mobile-nav {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+            will-change: transform;
+            border-top: 2px solid #0ff;
+            box-shadow: 0px -5px 15px rgba(0, 255, 255, 0.2);
+            clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
+        }
+
+        .nav-hidden-top { transform: translateY(-100%); }
+        .nav-hidden-bottom { transform: translateY(100%); }
+        .nav-visible { transform: translateY(0); }
+
+
+
+        /* 隱藏狀態：往上推 */
+        .header-hidden {
+            transform: translateY(-100%);
+        }
+
+        /* 顯示狀態：歸位 */
+        .header-visible {
+            transform: translateY(0);
+        }
+
+
+        /* 隱藏橫向卷軸 */
+        .hide-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 跑馬燈動畫 — 逐則播放 */
+        @keyframes marquee-slide {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+      @keyframes pulsate {
+            100% { text-shadow: 0 0 4px #fff, 0 0 11px #fff, 0 0 19px #fff, 0 0 40px #bc13fe, 0 0 80px #bc13fe; }
+            0% { text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 6px #fff, 0 0 10px #bc13fe, 0 0 45px #bc13fe; }
+        }
+
+        .marquee-item {
+            position: absolute;
+            white-space: nowrap;
+            will-change: transform;
+            animation: marquee-slide 10s linear forwards;
+        }
+
+        /* Riot 風格切角 (Clip Path) - 用於卡片和按鈕 */
+        .riot-cut {
+            clip-path: polygon(
+                10px 0, 100% 0,
+                100% calc(100% - 10px), calc(100% - 10px) 100%,
+                0 100%, 0 10px
+            );
+        }
+
+        /* 導航箭頭樣式 */
+        .nav-arrow {
+            width: 40px;
+            height: 40px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d13639; /* Riot Red */
+            cursor: pointer;
+            transition: all 0.2s;
+            clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+        }
+        .nav-arrow:hover {
+            background: #d13639;
+            color: white;
+            border-color: #d13639;
+        }
+
+        /* 卡片 Hover 特效 */
+        .game-card {
+            transition: transform 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: #d13639;
+        }
+
+      /* 背景裝飾：讓頂部透出的底圖更明顯 */
+        .bg-glow {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 1400px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(209, 54, 57, 0.15) 0%, rgba(15, 15, 15, 0) 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+      /* 使用者選單動畫 */
+        #user-menu {
+            transform-origin: top right;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .menu-hidden {
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+            pointer-events: none;
+        }
+        .menu-visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+
+        /* 個人化小場景：戰意視窗 */
+        .battle-room {
+            background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+        }
+        .battle-room::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(0, 255, 255, 0.02) 40px, rgba(0, 255, 255, 0.02) 80px);
+            pointer-events: none;
+        }
+        .room-character {
+            filter: drop-shadow(0 0 15px rgba(188, 19, 254, 0.4));
+            transition: transform 0.3s ease;
+        }
+        .room-character:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        /* 進度條細節 */
+        .xp-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        .xp-fill {
+            height: 100%;
+            background: #0ff;
+            box-shadow: 0 0 8px #0ff;
+            width: 75%;
+        }
+
+      /* 置頂標籤樣式 */
+        .pinned-tag {
+            background: #bc13fe;
+            color: white;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+            box-shadow: 0 0 10px rgba(188, 19, 254, 0.6);
+      }
+
+
+      /* 吉祥物固定容器 */
+        .mascot-container {
+            position: fixed;
+            bottom: 80px; /* 避開手機版導覽列 */
+            right: 20px;
+            z-index: 100;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @media (min-width: 768px) {
+            .mascot-container {
+                bottom: 30px;
+                right: 40px;
+            }
+        }
+
+        /* 吉祥物浮動動畫 */
+        .mascot-wrapper {
+            pointer-events: auto;
+            cursor: pointer;
+            position: relative;
+            animation: mascotFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes mascotFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
+        }
+
+        .mascot-image {
+            width: 80px;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            .mascot-image { width: 120px; }
+        }
+
+        .mascot-wrapper:hover .mascot-image {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 20px rgba(188, 19, 254, 0.8));
+        }
+
+        /* 對話氣泡 */
+        .mascot-bubble {
+            position: absolute;
+            bottom: 110%;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #0ff;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #0ff;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+        }
+
+        .mascot-wrapper:hover .mascot-bubble {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+      /* TOP 按鈕樣式 */
+        #top-btn {
+            position: fixed;
+            bottom: 200px; /* 位於吉祥物上方 */
+            right: 20px;
+            z-index: 90;
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #0ff;
+            color: #0ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 30;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+
+       #top-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #top-btn:hover {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 20px #0ff;
+        }
+
+      @media (min-width: 768px) {
+            #top-btn {
+                bottom: 200px;
+                right: 75px; /* 配合電腦版吉祥物位置微調 */
+            }
+        }
+
+        .scroll-background-hero {
+            position: relative;
+            width: 100%;
+            height: 700px;
+            background-size: cover;
+            background-position: center bottom;
+            background-image: url('https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=1000&auto=format&fit=crop');
+        }
+
+        @media (min-width: 768px) {
+            .scroll-background-hero {
+                height: 600px;
+                background-image: url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2670&auto=format&fit=crop');
+            }
+        }
+
+      .ratio-260-148 {
+            aspect-ratio: 260 / 148;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #444;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .dot.active {
+            background-color: #fff;
+            width: 12px;
+            border-radius: 4px;
+        }
+
+        .fade-content {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.98);
+        }
+
+        /* Hero Carousel - Side Padding */
+        #hero-track {
+            padding: 0;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .hero-slide {
+            width: 100%;
+            opacity: 0.7;
+            transform: scale(0.95);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .hero-slide.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        @media (min-width: 768px) {
+            #hero-track { padding: 0 2%; }
+            .hero-slide { width: 66%; }
+        }
+
+    </style>
+</head>
+<body class="pb-10">
+
+  <!-- TOP 按鈕 -->
+    <div id="top-btn" class="riot-cut" onclick="scrollToTop()">
+        <i class="fas fa-chevron-up"></i>
+    </div>
+
+
+   <!-- 吉祥物 -->
+    <div class="mascot-container">
+        <div class="mascot-wrapper" onclick="toggleMascotMsg()">
+            <div class="mascot-bubble" id="mascot-msg">需要支援嗎，特工？</div>
+            <img src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Neon&backgroundColor=b6e3f4,c0aede,d1d4f9" alt="Mascot" class="mascot-image">
+            <!-- 裝飾用的小光暈 -->
+            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-2 bg-cyan-500/20 blur-md rounded-full"></div>
+        </div>
+    </div>
+
+
+
+  <!-- 背景光效 (強化沉浸感) -->
+    <div class="bg-glow"></div>
+
+
+  <!-- 智慧型導航 (Smart Header) -->
+    <nav id="main-header" class="fixed top-0 left-0 w-full z-50 bg-[#111] bg-opacity-5  header-visible">
+        <div class="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+            <!-- Logo & Links -->
+            <div class="flex items-center gap-10">
+                <div class="flex items-center gap-3 cursor-pointer group">
+                    <div class="w-10 h-10 bg-[#d13639] flex items-center justify-center riot-cut group-hover:scale-110 transition-transform">
+                        <i class="fas fa-gamepad text-white text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-bold tracking-widest text-white brand-font">PlayHorny</span>
+                </div>
+
+                <div class="hidden lg:flex gap-8 text-sm font-bold tracking-wide text-white-400 uppercase">
+                    <a href="#" class="hover:text-white transition-colors border-b-2 border-[#d13639] text-white pb-1">首頁</a>
+                    <a href="#" class="hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-white">遊戲</a>
+                    <a href="情報站.html" class="hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-white flex items-center gap-1">情報吧 <i class="fas fa-caret-down text-xs"></i></a>
+                    <a href="#" class="hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-white">儲值HCoin</a>
+                    <a href="#" class="hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-white">瑟瑟商城</a>
+                    <a href="#" class="hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-white">狂歡派對卡</a>
+                </div>
+            </div>
+
+
+
+            <div class="flex items-center gap-4 relative">
+                <div class="hidden md:block relative">
+                    <input type="text" placeholder="SEARCH..." class="bg-white/5 border-b border-[#0ff]/30 text-white px-4 py-2 w-48 focus:outline-none focus:border-[#0ff] transition-all text-sm font-bold uppercase placeholder-gray-500">
+                    <i class="fas fa-search absolute right-2 top-2.5 text-[#0ff]"></i>
+                </div>
+
+                <button class="w-10 h-10 bg-white/5 hover:bg-[#333] flex items-center justify-center text-[#0ff] riot-cut transition-colors relative group border border-[#0ff]/20">
+                    <i class="fas fa-bell group-hover:animate-bounce"></i>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-[#0ff] rounded-full shadow-[0_0_5px_#0ff]"></span>
+                </button>
+
+
+
+          <!-- 使用者頭像與選單 -->
+                <div class="relative">
+                    <div id="avatar-btn" class="w-10 h-10 bg-[#333] overflow-hidden border border-[#0ff]/50 riot-cut cursor-pointer hover:border-[#0ff] transition-colors shadow-[0_0_10px_rgba(0,255,255,0.3)]">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
+                    </div>
+
+                    <!-- 下拉選單視窗 -->
+                    <div id="user-menu" class="absolute right-0 mt-4 w-80 bg-black/95 backdrop-blur-xl border border-[#0ff]/40 riot-cut shadow-[0_10px_40px_rgba(0,0,0,0.9)] menu-hidden z-[60] overflow-hidden">
+
+                        <!-- 會員小場景 (Battle Room) -->
+                        <div class="battle-room p-6 flex flex-col items-center">
+                            <!-- 場景裝飾標籤 -->
+                            <div class="absolute top-2 right-3 flex gap-1">
+                                <div class="w-1 h-3 bg-[#0ff]/30"></div>
+                                <div class="w-1 h-3 bg-[#0ff]/30"></div>
+                            </div>
+
+                            <!-- 角色模型展示 -->
+                            <div class="relative w-24 h-24 mb-4">
+                                <div class="absolute inset-0 bg-[#bc13fe]/20 rounded-full blur-xl animate-pulse"></div>
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-full h-full relative z-10 room-character" alt="Avatar">
+                            </div>
+
+                            <div class="text-center z-10">
+                                <div class="text-xs font-black text-[#0ff] tracking-[0.2em] mb-1">UNSTOPPABLE</div>
+                                <div class="text-2xl font-black text-white brand-font italic tracking-wide">AGENT FELIX</div>
+                                <div class="flex items-center justify-center gap-2 mt-2">
+                                    <span class="text-[10px] font-bold bg-[#333] px-2 py-0.5 text-gray-400 border border-white/10">LVL 42</span>
+                                    <div class="w-24 xp-bar">
+                                        <div class="xp-fill"></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-white/50">75%</span>
+                                </div>
+                            </div>
+
+                            <!-- 個人化快捷設置 -->
+                            <div class="grid grid-cols-2 gap-2 w-full mt-6">
+                                <button class="bg-white/5 hover:bg-white/10 border border-white/10 py-2 flex flex-col items-center gap-1 transition-all group">
+                                    <i class="fas fa-palette text-xs text-gray-500 group-hover:text-[#bc13fe]"></i>
+                                    <span class="text-[9px] font-black uppercase tracking-tighter text-gray-400">Appearance</span>
+                                </button>
+                                <button class="bg-white/5 hover:bg-white/10 border border-white/10 py-2 flex flex-col items-center gap-1 transition-all group">
+                                    <i class="fas fa-shield-alt text-xs text-gray-500 group-hover:text-[#0ff]"></i>
+                                    <span class="text-[9px] font-black uppercase tracking-tighter text-gray-400">Security</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 底部選單連結 -->
+                        <div class="p-2 bg-black/40">
+                            <ul class="space-y-0.5">
+                                <li>
+                                    <a href="#" class="flex items-center justify-between px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fas fa-trophy text-[#0ff] group-hover:scale-110 transition-transform"></i>
+                                            <span class="text-[11px] font-black uppercase tracking-widest">Achievements</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-[#0ff]">12 NEW</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                                        <i class="fas fa-cog text-[#0ff] group-hover:rotate-45 transition-transform"></i>
+                                        <span class="text-[11px] font-black uppercase tracking-widest">Account Settings</span>
+                                    </a>
+                                </li>
+                                <li class="pt-2 mt-1 border-t border-white/10">
+                                    <a href="#" class="flex items-center gap-3 px-4 py-4 text-[#bc13fe] hover:text-white hover:bg-[#bc13fe]/10 transition-all group">
+                                        <i class="fas fa-power-off group-hover:scale-110 transition-transform"></i>
+                                        <span class="text-[11px] font-black uppercase tracking-widest">Sign Out</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                      </div>
+                  </div>
+          </div>
+        </div>
+    </nav>
+
+
+  <!-- 智慧型手機版底部導覽列 -->
+    <nav id="mobile-nav" class="lg:hidden fixed bottom-0 left-0 w-full z-50 bg-black/90 backdrop-blur-lg nav-visible">
+        <div class="flex items-center justify-around h-16 px-4">
+            <a href="#" class="flex flex-col items-center gap-1 text-[#0ff]">
+                <i class="fas fa-home text-lg"></i>
+                <span class="text-[9px] font-black uppercase tracking-tighter">Home</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-gray-500 hover:text-[#0ff] transition-colors">
+                <i class="fas fa-gamepad text-lg"></i>
+                <span class="text-[9px] font-black uppercase tracking-tighter">Games</span>
+            </a>
+            <div class="relative -top-4">
+                <button class="w-14 h-14 bg-[#0ff] text-black flex items-center justify-center riot-cut shadow-[0_0_20px_#0ff] border-4 border-[#0f0f0f]">
+                    <i class="fas fa-plus text-xl"></i>
+                </button>
+            </div>
+            <a href="#" class="flex flex-col items-center gap-1 text-gray-500 hover:text-[#0ff] transition-colors">
+                <i class="fas fa-newspaper text-lg"></i>
+                <span class="text-[9px] font-black uppercase tracking-tighter">News</span>
+            </a>
+            <a href="#" class="flex flex-col items-center gap-1 text-gray-500 hover:text-[#0ff] transition-colors">
+                <i class="fas fa-trophy text-lg"></i>
+                <span class="text-[9px] font-black uppercase tracking-tighter">Esports</span>
+            </a>
+        </div>
+    </nav>
+
+
+    <!-- 主內容區 -->
+    <main class="max-w-[1400px] mx-auto px-4 md:px-6 pt-[86px]">
+
+<!-- 副導覽列 (Sub Navigation) -->
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
+            <div class="flex items-center gap-2 overflow-x-auto hide-scroll w-full md:w-auto bg-white/5 backdrop-blur-md p-1.5 rounded-full border border-white/10">
+                <button class="whitespace-nowrap px-6 py-2 rounded-full bg-white text-black font-bold text-sm shadow-lg">推薦</button>
+                <button class="whitespace-nowrap px-6 py-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white font-bold text-sm transition-all">PlayHorny精選</button>
+                <button class="whitespace-nowrap px-6 py-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white font-bold text-sm transition-all">線上遊戲</button>
+                <button class="whitespace-nowrap px-6 py-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white font-bold text-sm transition-all">品牌館</button>
+                <button class="whitespace-nowrap px-6 py-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white font-bold text-sm transition-all">商店優惠</button>
+                <button class="whitespace-nowrap px-6 py-2 rounded-full hover:bg-white/10 text-white/70 hover:text-white font-bold text-sm transition-all flex items-center gap-1">
+                    類別 <i class="fas fa-chevron-down text-[10px]"></i>
+                </button>
+            </div>
+
+        </div>
+
+
+      <!-- 1. Hero Section - Side Padding Carousel -->
+        <div class="relative mb-6" id="hero-section">
+            <!-- Carousel Viewport -->
+            <div class="overflow-hidden">
+                <div class="flex gap-1 md:gap-3" id="hero-track">
+
+                    <!-- Slide 1 -->
+                    <div class="hero-slide active flex-none riot-cut overflow-hidden">
+                        <div class="relative aspect-video md:max-h-[50vh] bg-[#1a1a1a]">
+                            <img src="https://www.ikea.com.tw/dairyfarm/tw/pageImages/page__zh_tw_17061474861700172621.jpeg"
+                                 class="w-full h-full object-cover" alt="Cyber Conquest">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/30 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 max-w-md">
+                                <span class="text-[#0ff] text-[10px] md:text-xs font-black tracking-[0.3em] uppercase mb-1 md:mb-2 block animate-pulse">Available Now</span>
+                                <h2 class="text-2xl md:text-4xl font-black italic mb-2 neon-text-purple leading-tight">Cyber Conquest</h2>
+                                <p class="text-gray-300 text-xs md:text-sm font-medium drop-shadow-lg">進入霓虹閃爍的戰場，體驗未來的戰鬥節奏。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2 -->
+                    <div class="hero-slide flex-none riot-cut overflow-hidden">
+                        <div class="relative aspect-video md:max-h-[50vh] bg-[#1a1a1a]">
+                            <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2670&auto=format&fit=crop"
+                                 class="w-full h-full object-cover" alt="Arena Clash">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/30 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 max-w-md">
+                                <span class="text-[#0ff] text-[10px] md:text-xs font-black tracking-[0.3em] uppercase mb-1 md:mb-2 block">Season 4</span>
+                                <h2 class="text-2xl md:text-4xl font-black italic mb-2 text-white leading-tight">Arena Clash</h2>
+                                <p class="text-gray-300 text-xs md:text-sm font-medium drop-shadow-lg">全新對戰模式即將開啟，準備迎戰。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3 -->
+                    <div class="hero-slide flex-none riot-cut overflow-hidden">
+                        <div class="relative aspect-video md:max-h-[50vh] bg-[#1a1a1a]">
+                            <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop"
+                                 class="w-full h-full object-cover" alt="Phantom Strike">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/30 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 max-w-md">
+                                <span class="text-[#0ff] text-[10px] md:text-xs font-black tracking-[0.3em] uppercase mb-1 md:mb-2 block">New Game</span>
+                                <h2 class="text-2xl md:text-4xl font-black italic mb-2 text-white leading-tight">Phantom Strike</h2>
+                                <p class="text-gray-300 text-xs md:text-sm font-medium drop-shadow-lg">潛入暗影世界，成為最強刺客。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 4 -->
+                    <div class="hero-slide flex-none riot-cut overflow-hidden">
+                        <div class="relative aspect-video md:max-h-[50vh] bg-[#1a1a1a]">
+                            <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2671&auto=format&fit=crop"
+                                 class="w-full h-full object-cover" alt="Void Abyss">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/30 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 max-w-md">
+                                <span class="text-[#d13639] text-[10px] md:text-xs font-black tracking-[0.3em] uppercase mb-1 md:mb-2 block">Limited Event</span>
+                                <h2 class="text-2xl md:text-4xl font-black italic mb-2 text-white leading-tight">Void Abyss</h2>
+                                <p class="text-gray-300 text-xs md:text-sm font-medium drop-shadow-lg">限時虛空事件，獎勵豐富。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 5 -->
+                    <div class="hero-slide flex-none riot-cut overflow-hidden">
+                        <div class="relative aspect-video md:max-h-[50vh] bg-[#1a1a1a]">
+                            <img src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2665&auto=format&fit=crop"
+                                 class="w-full h-full object-cover" alt="Season Pass">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/30 to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 max-w-md">
+                                <span class="text-[#bc13fe] text-[10px] md:text-xs font-black tracking-[0.3em] uppercase mb-1 md:mb-2 block">Premium</span>
+                                <h2 class="text-2xl md:text-4xl font-black italic mb-2 text-white leading-tight">Season Pass</h2>
+                                <p class="text-gray-300 text-xs md:text-sm font-medium drop-shadow-lg">解鎖專屬獎勵與限定造型。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 左右箭頭 -->
+            <button id="hero-prev" class="absolute left-1 md:left-4 top-1/2 -translate-y-1/2 nav-arrow z-10 transition-opacity duration-300" onclick="heroSlide(-1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button id="hero-next" class="absolute right-1 md:right-4 top-1/2 -translate-y-1/2 nav-arrow z-10 transition-opacity duration-300" onclick="heroSlide(1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Dot 指示器 -->
+            <div class="flex justify-center gap-2 mt-4" id="hero-dots">
+                <button class="dot active" onclick="heroGoTo(0)"></button>
+                <button class="dot" onclick="heroGoTo(1)"></button>
+                <button class="dot" onclick="heroGoTo(2)"></button>
+                <button class="dot" onclick="heroGoTo(3)"></button>
+                <button class="dot" onclick="heroGoTo(4)"></button>
+            </div>
+        </div>
+
+        <!-- 2. Marquee / 系統廣播 -->
+        <div class="bg-[#1a1a1a] border-l-4 border-[#d13639] p-2 flex items-center mb-12 overflow-hidden riot-cut">
+            <div class="flex items-center px-4 z-10 bg-[#1a1a1a]">
+                <i class="fas fa-bullhorn text-[#d13639] mr-3 animate-pulse"></i>
+                <span class="text-white font-bold text-sm uppercase tracking-wider mr-4 brand-font">System Alert</span>
+                <span class="text-[10px] bg-[#333] text-gray-300 px-2 py-0.5 uppercase tracking-wide border border-[#444] hidden md:inline-block">Maintenance</span>
+            </div>
+            <div id="marquee-container" class="flex-1 overflow-hidden relative h-6">
+                <!-- JS 會逐則產生 marquee-item -->
+            </div>
+        </div>
+
+        <!-- 3. 精選遊戲 (Selected Games) -->
+        <section class="mb-16">
+            <div class="flex justify-between items-end mb-6 border-b border-[#333] pb-2">
+                <h2 class="text-3xl font-bold text-white italic">PlayHorny 精選</h2>
+                <a href="#" class="bg-[#333] hover:bg-[#d13639] hover:text-white text-gray-300 text-xs font-bold px-4 py-2 uppercase tracking-widest transition-colors riot-cut">
+                    View All
+                </a>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 md:gap-6">
+                <!-- Card 1 -->
+                <div class="bg-[#1a1a1a] riot-cut overflow-hidden shadow-lg game-card group relative">
+                    <div class="aspect-[460/215] md:aspect-[16/5] bg-gray-800 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-100 transition-transform duration-500 filter brightness-90 group-hover:brightness-100">
+                    </div>
+                    <!-- 手機：精簡名稱列 -->
+                    <div class="px-3 py-2 border-t border-[#333] md:hidden">
+                        <h3 class="font-bold text-sm text-white uppercase italic truncate">Magic Academy</h3>
+                    </div>
+                    <!-- 桌機：icon + 名稱 + tags + 裝置 -->
+                    <div class="hidden md:flex p-4 items-start gap-4 border-t border-[#333]">
+                        <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop" class="w-[50px] h-[50px] object-cover border border-[#444] flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-base text-white uppercase italic leading-tight">Magic Academy</h3>
+                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#RPG</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Strategy</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Fantasy</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Adventure</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Puzzle</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-500 text-sm flex-shrink-0">
+                            <i class="fab fa-windows" title="PC"></i>
+                            <i class="fab fa-android" title="Android"></i>
+                            <i class="fab fa-apple" title="iOS"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-[#1a1a1a] riot-cut overflow-hidden shadow-lg game-card group relative">
+                    <div class="aspect-[460/215] md:aspect-[16/5] bg-gray-800 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100">
+                    </div>
+                    <!-- 手機：精簡名稱列 -->
+                    <div class="px-3 py-2 border-t border-[#333] md:hidden">
+                        <h3 class="font-bold text-sm text-white uppercase italic truncate">Cyber Force 2077</h3>
+                    </div>
+                    <!-- 桌機：icon + 名稱 + tags + 裝置 -->
+                    <div class="hidden md:flex p-4 items-start gap-4 border-t border-[#333]">
+                        <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop" class="w-[50px] h-[50px] object-cover border border-[#444] flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-base text-white uppercase italic leading-tight">Cyber Force 2077</h3>
+                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Action</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#FPS</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Sci-Fi</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Online</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Battle</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-500 text-sm flex-shrink-0">
+                            <i class="fab fa-windows" title="PC"></i>
+                            <i class="fab fa-android" title="Android"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-[#1a1a1a] riot-cut overflow-hidden shadow-lg game-card group relative">
+                    <div class="aspect-[460/215] md:aspect-[16/5] bg-gray-800 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100">
+                    </div>
+                    <!-- 手機：精簡名稱列 -->
+                    <div class="px-3 py-2 border-t border-[#333] md:hidden">
+                        <h3 class="font-bold text-sm text-white uppercase italic truncate">Abyss Legend</h3>
+                    </div>
+                    <!-- 桌機：icon + 名稱 + tags + 裝置 -->
+                    <div class="hidden md:flex p-4 items-start gap-4 border-t border-[#333]">
+                        <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=2670&auto=format&fit=crop" class="w-[50px] h-[50px] object-cover border border-[#444] flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-base text-white uppercase italic leading-tight">Abyss Legend</h3>
+                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#MMO</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Fantasy</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#RPG</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Adventure</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Open-World</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-500 text-sm flex-shrink-0">
+                            <i class="fab fa-windows" title="PC"></i>
+                            <i class="fab fa-android" title="Android"></i>
+                            <i class="fab fa-apple" title="iOS"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-[#1a1a1a] riot-cut overflow-hidden shadow-lg game-card group relative">
+                    <div class="aspect-[460/215] md:aspect-[16/5] bg-gray-800 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2671&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100">
+                    </div>
+                    <!-- 手機：精簡名稱列 -->
+                    <div class="px-3 py-2 border-t border-[#333] md:hidden">
+                        <h3 class="font-bold text-sm text-white uppercase italic truncate">Mecha Front</h3>
+                    </div>
+                    <!-- 桌機：icon + 名稱 + tags + 裝置 -->
+                    <div class="hidden md:flex p-4 items-start gap-4 border-t border-[#333]">
+                        <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2671&auto=format&fit=crop" class="w-[50px] h-[50px] object-cover border border-[#444] flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-base text-white uppercase italic leading-tight">Mecha Front</h3>
+                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Mecha</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Sci-Fi</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Action</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Strategy</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#Online</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-500 text-sm flex-shrink-0">
+                            <i class="fab fa-windows" title="PC"></i>
+                            <i class="fab fa-android" title="Android"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
+ <section class="mb-10 relative group/slider">
+            <div class="flex justify-between items-end mb-6 border-b border-[#333] pb-2">
+                <h2 class="text-3xl font-bold text-white italic">手機遊戲推薦</h2>
+                <div class="flex gap-2">
+                    <button class="w-8 h-8 bg-[#222] border border-[#333] flex items-center justify-center hover:bg-[#d13639] hover:text-white transition-colors riot-cut">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="w-8 h-8 bg-[#222] border border-[#333] flex items-center justify-center hover:bg-[#d13639] hover:text-white transition-colors riot-cut">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                <!-- 大卡：遊戲名稱 + 簡介（左）+ tags（右） -->
+                <div class="lg:col-span-5 flex flex-col group cursor-pointer">
+                    <div class="relative overflow-hidden rounded-2xl w-full border border-white/5 bg-[#1a1a1a] aspect-video">
+                        <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2670&auto=format&fit=crop"
+                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                             alt="第七史詩 Epic Seven">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent flex flex-col justify-end p-5">
+                            <h3 class="text-white font-bold text-base md:text-xl leading-tight">第七史詩 Epic Seven</h3>
+                            <p class="text-sm text-gray-300 mt-1 leading-relaxed line-clamp-2">集動畫風格與回合制 RPG 於一身的史詩冒險，超過 1,000 位英雄等你召喚，打造屬於你的強力隊伍，踏上拯救世界的旅程。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 小卡 x3：遊戲名稱 + 5 tags，手機版維持 3 欄 -->
+                <div class="lg:col-span-7 grid grid-cols-3 gap-3 md:gap-6">
+
+                    <div class="flex flex-col gap-3 group cursor-pointer">
+                        <div class="aspect-video rounded-2xl overflow-hidden bg-[#252525] border border-white/5 group-hover:border-[#ff8c00]/50 transition-all">
+                            <img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="px-1">
+                            <h4 class="font-bold text-xs md:text-sm text-white mb-2 truncate uppercase tracking-wider">勝利女神：妮姬</h4>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#射擊</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#美少女</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 group cursor-pointer">
+                        <div class="aspect-video rounded-2xl overflow-hidden bg-[#252525] border border-white/5 group-hover:border-[#ff8c00]/50 transition-all">
+                            <img src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="px-1">
+                            <h4 class="font-bold text-xs md:text-sm text-white mb-2 truncate uppercase tracking-wider">蔚藍檔案</h4>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#RPG</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#學園</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 group cursor-pointer">
+                        <div class="aspect-video rounded-2xl overflow-hidden bg-[#252525] border border-white/5 group-hover:border-[#ff8c00]/50 transition-all">
+                            <img src="https://images.unsplash.com/photo-1542751110-97427bbecf20?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="px-1">
+                            <h4 class="font-bold text-xs md:text-sm text-white mb-2 truncate uppercase tracking-wider">明日方舟</h4>
+                            <div class="flex flex-wrap gap-1">
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#塔防</span>
+                                <span class="text-[10px] font-bold bg-white/5 px-2 py-0.5 text-gray-400 border border-white/10">#策略</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 單機推薦 (Single Player) -->
+        <section class="mb-10 relative group/slider">
+            <div class="flex justify-between items-end mb-6 border-b border-[#333] pb-2">
+                <h2 class="text-3xl font-bold text-white italic">單機遊戲推薦</h2>
+                <div class="flex gap-2">
+                    <button class="w-8 h-8 bg-[#222] border border-[#333] flex items-center justify-center hover:bg-[#d13639] hover:text-white transition-colors riot-cut">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="w-8 h-8 bg-[#222] border border-[#333] flex items-center justify-center hover:bg-[#d13639] hover:text-white transition-colors riot-cut">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                <!-- 大卡：遊戲名稱 + 簡介（左）+ 價格（右） -->
+                <div class="lg:col-span-5 flex flex-col group cursor-pointer">
+                    <div class="relative overflow-hidden rounded-2xl w-full border border-white/5 bg-[#1a1a1a] aspect-video">
+                        <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2670&auto=format&fit=crop"
+                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                             alt="Cyber Wave">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent flex flex-col justify-end p-5">
+                            <h3 class="text-white font-bold text-base md:text-xl leading-tight">Cyber Wave</h3>
+                            <p class="text-sm text-gray-300 mt-1 leading-relaxed line-clamp-2">在賽博龐克廢土中橫衝直撞的開放世界 RPG，駭入城市系統、組建傭兵團隊，以鋼鐵意志書寫屬於你的傳說。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 小卡 x3：遊戲名稱 + 價格，手機版維持 3 欄 -->
+                <div class="lg:col-span-7 grid grid-cols-3 gap-3 md:gap-6">
+
+                    <div class="flex flex-col gap-3 group cursor-pointer">
+                        <div class="aspect-video rounded-2xl overflow-hidden bg-[#252525] border border-white/5 group-hover:border-[#ff8c00]/50 transition-all">
+                            <img src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2665&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="px-1">
+                            <h4 class="font-bold text-xs md:text-sm text-white mb-2 truncate uppercase tracking-wider">Pixel Dungeon</h4>
+                            <span class="text-[#d13639] font-bold text-sm">111,555 MC</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 group cursor-pointer">
+                        <div class="aspect-video rounded-2xl overflow-hidden bg-[#252525] border border-white/5 group-hover:border-[#ff8c00]/50 transition-all">
+                            <img src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2665&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="px-1">
+                            <h4 class="font-bold text-xs md:text-sm text-white mb-2 truncate uppercase tracking-wider">Secret Forest</h4>
+                            <span class="text-green-400 font-bold text-sm">FREE</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 group cursor-pointer">
+                        <div class="aspect-video rounded-2xl overflow-hidden bg-[#252525] border border-white/5 group-hover:border-[#ff8c00]/50 transition-all">
+                            <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="px-1">
+                            <h4 class="font-bold text-xs md:text-sm text-white mb-2 truncate uppercase tracking-wider">Star Fighter</h4>
+                            <span class="text-[#d13639] font-bold text-sm">88,000 MC</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+         <!-- 4. 平台促銷 Banner (對應 image_aad255.png 中間長條) -->
+        <section class="mb-16">
+            <div class="w-full h-32 md:h-40 bg-gradient-to-r from-[#d13639] to-[#8a1c1e] riot-cut relative overflow-hidden group cursor-pointer flex items-center px-10 justify-between">
+                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
+                <!-- 裝飾線 -->
+                <div class="absolute top-0 left-0 w-2 h-full bg-white/20"></div>
+
+                <div class="relative z-10">
+                    <span class="text-black/50 font-black text-6xl absolute -top-8 -left-4 select-none italic">SALE</span>
+                    <h3 class="text-3xl md:text-4xl font-black text-white italic uppercase relative drop-shadow-lg">
+                        Platform Mega Sale
+                    </h3>
+                    <p class="text-white/80 font-bold tracking-widest mt-1 uppercase">Up to 80% off on selected titles</p>
+                </div>
+
+                <div class="relative z-10 hidden md:block">
+                     <button class="bg-white text-[#d13639] font-black px-8 py-3 uppercase tracking-widest hover:bg-black hover:text-white transition-colors riot-cut shadow-xl">
+                        Shop Now
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 中段廣告區 (Ad Banners) - 分組輪替 A/B -->
+        <section class="mb-16 group relative" id="mid-ads-section">
+            <div class="flex overflow-x-auto md:grid md:grid-cols-3 gap-6 hide-scroll mobile-scroll-container" id="mid-ads-container">
+                <!-- ===== Group A ===== -->
+                <!-- Ad A1 -->
+                <div class="mobile-ad-card mid-ad flex-shrink-0 md:flex-shrink w-full md:h-64 bg-[#222] riot-cut relative overflow-hidden border border-[#333] hover:border-[#d13639] transition-colors scroll-snap-align-center" data-group="A">
+                    <img src="https://i0.wp.com/www.lifetoutiao.news/wp-content/uploads/2023/09/%E6%B3%B1%E6%B3%B1%E6%96%B0%E8%81%9E%E7%A8%BF%E7%94%A8%E5%9C%961-1-jpg.webp?w=1600&ssl=1" class="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <span class="bg-[#d13639] text-white text-[10px] px-2 py-0.5 font-bold uppercase mb-2">Advertisement</span>
+                        <h3 class="text-xl md:text-2xl font-black text-white uppercase italic drop-shadow-md">Gaming Gear Sale</h3>
+                    </div>
+                </div>
+                <!-- Ad A2 -->
+                <div class="mobile-ad-card mid-ad flex-shrink-0 md:flex-shrink w-full md:h-64 bg-[#222] riot-cut relative overflow-hidden border border-[#333] hover:border-[#d13639] transition-colors scroll-snap-align-center" data-group="A">
+                    <img src="https://p2.bahamut.com.tw/B/2KU/47/16ad9267cb8bc58e38f02e22401n6tn5.JPG?v=1694500086702" class="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <span class="bg-[#d13639] text-white text-[10px] px-2 py-0.5 font-bold uppercase mb-2">Partner</span>
+                        <h3 class="text-xl md:text-2xl font-black text-white uppercase italic drop-shadow-md">Cloud Gaming Now</h3>
+                    </div>
+                </div>
+                <!-- Ad A3 -->
+                <div class="mobile-ad-card mid-ad flex-shrink-0 md:flex-shrink w-full md:h-64 bg-[#222] riot-cut relative overflow-hidden border border-[#333] hover:border-[#d13639] transition-colors scroll-snap-align-center" data-group="A">
+                    <img src="https://truth.bahamut.com.tw/s01/202309/816be73fa47f3daee449222a2fe71e89.JPG" class="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <span class="bg-[#d13639] text-white text-[10px] px-2 py-0.5 font-bold uppercase mb-2">Exclusive</span>
+                        <h3 class="text-xl md:text-2xl font-black text-white uppercase italic drop-shadow-md">New Tech Expo</h3>
+                    </div>
+                </div>
+
+                <!-- ===== Group B ===== -->
+                <!-- Ad B1 -->
+                <div class="mobile-ad-card mid-ad flex-shrink-0 md:flex-shrink w-full md:h-64 bg-[#222] riot-cut relative overflow-hidden border border-[#333] hover:border-[#d13639] transition-colors scroll-snap-align-center" data-group="B" style="display:none;">
+                    <img src="https://truth.bahamut.com.tw/s01/202404/d47a997218c94d19fb27c4a3aa63e8bf.JPG" class="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <span class="bg-[#d13639] text-white text-[10px] px-2 py-0.5 font-bold uppercase mb-2">Hot</span>
+                        <h3 class="text-xl md:text-2xl font-black text-white uppercase italic drop-shadow-md">Esports Championship</h3>
+                    </div>
+                </div>
+                <!-- Ad B2 -->
+                <div class="mobile-ad-card mid-ad flex-shrink-0 md:flex-shrink w-full md:h-64 bg-[#222] riot-cut relative overflow-hidden border border-[#333] hover:border-[#d13639] transition-colors scroll-snap-align-center" data-group="B" style="display:none;">
+                    <img src="https://truth.bahamut.com.tw/s01/202309/c39c tried7d4f6f3c8e60b5c0e79b9b9a55.JPG" class="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <span class="bg-[#d13639] text-white text-[10px] px-2 py-0.5 font-bold uppercase mb-2">Partner</span>
+                        <h3 class="text-xl md:text-2xl font-black text-white uppercase italic drop-shadow-md">VR Gaming Fest</h3>
+                    </div>
+                </div>
+                <!-- Ad B3 -->
+                <div class="mobile-ad-card mid-ad flex-shrink-0 md:flex-shrink w-full md:h-64 bg-[#222] riot-cut relative overflow-hidden border border-[#333] hover:border-[#d13639] transition-colors scroll-snap-align-center" data-group="B" style="display:none;">
+                    <img src="https://p2.bahamut.com.tw/B/2KU/99/0004927399.JPG" class="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <span class="bg-[#d13639] text-white text-[10px] px-2 py-0.5 font-bold uppercase mb-2">Exclusive</span>
+                        <h3 class="text-xl md:text-2xl font-black text-white uppercase italic drop-shadow-md">Indie Game Awards</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 導航控制項 (箭頭在圓點左右) -->
+            <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <!-- 左導航箭頭 -->
+                <button class="mid-ad-prev w-8 h-8 flex items-center justify-center bg-black/50 border border-white/20 hover:bg-[#d13639] hover:border-[#d13639] transition-all transform -skew-x-12">
+                    <i class="fas fa-chevron-left text-xs text-white skew-x-12"></i>
+                </button>
+
+                <!-- 底部圓點 (方形) -->
+                <div class="flex gap-3" id="mid-ads-dots">
+                    <button class="w-2 h-2 bg-[#d13639] transform rotate-45"></button>
+                    <button class="w-2 h-2 bg-gray-600 transform rotate-45 hover:bg-white transition-colors"></button>
+                    <button class="w-2 h-2 bg-gray-600 transform rotate-45 hover:bg-white transition-colors"></button>
+                </div>
+
+                <!-- 右導航箭頭 -->
+                <button class="mid-ad-next w-8 h-8 flex items-center justify-center bg-black/50 border border-white/20 hover:bg-[#d13639] hover:border-[#d13639] transition-all transform -skew-x-12">
+                    <i class="fas fa-chevron-right text-xs text-white skew-x-12"></i>
+                </button>
+            </div>
+        </section>
+
+
+        <!-- 7. 最新情報 (Latest Info) - Split Layout -->
+        <section class="mb-16 relative group">
+            <h2 class="text-3xl font-bold text-white italic mb-1">最新情報</h2>
+            <div class="text-xs text-[#d13639] font-bold uppercase tracking-widest mb-4">本周狂推活動</div>
+
+            <div class="flex flex-col md:flex-row bg-[#1a1a1a] riot-cut overflow-hidden h-auto md:h-96 border border-[#333] group/item hover:border-[#d13639] transition-colors relative">
+                <!-- 左側大圖 -->
+                <div class="w-full md:w-2/3 h-56 md:h-full relative overflow-hidden">
+                    <img src="https://p2.itc.cn/images01/20231223/6abea8d36664447f853ed400dfc8b337.png" class="w-full h-full object-cover transition-transform duration-700 group-hover/item:scale-105">
+                    <!-- 斜切遮罩 -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#1a1a1a] opacity-80 md:opacity-100 hidden md:block" style="clip-path: polygon(80% 0, 100% 0, 100% 100%, 60% 100%);"></div>
+                </div>
+
+                <!-- 右側內容 (Riot 風格背景) -->
+                <div class="w-full md:w-1/3 p-8 bg-[#1a1a1a] text-white flex flex-col justify-between border-l border-[#333] relative z-10">
+                    <div>
+                        <h3 class="text-3xl font-black mb-4 uppercase italic leading-tight">Summer Showdown: The Arena</h3>
+                        <p class="text-sm font-medium leading-relaxed text-gray-400">
+                            The heat is on! Join the battlefield with exclusive summer skins and limited-time game modes.
+                            <br><br>
+                            <span class="text-white block mb-1">> Login Rewards: 10x Gacha</span>
+                            <span class="text-white block">> Win Streak Bonus</span>
+                        </p>
+                    </div>
+                    <div class="flex justify-between items-end mt-6">
+                        <span class="text-xs font-bold text-gray-500">FEB 23, 2026</span>
+                        <div class="flex gap-2">
+                            <span class="bg-[#333] px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border border-[#444]">Event</span>
+                            <span class="bg-[#333] px-2 py-1 text-[10px] uppercase font-bold text-gray-400 border border-[#444]">Skin</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 導航箭頭 (浮動在區塊邊緣) -->
+                <button class="absolute left-4 top-1/2 -translate-y-1/2 nav-arrow opacity-0 group-hover:opacity-100 z-20">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="absolute right-4 top-1/2 -translate-y-1/2 nav-arrow opacity-0 group-hover:opacity-100 z-20">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <!-- 底部圓點 (方形) -->
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+                    <button class="w-2 h-2 bg-[#d13639] transform rotate-45"></button>
+                    <button class="w-2 h-2 bg-gray-600 transform rotate-45 hover:bg-white transition-colors"></button>
+                    <button class="w-2 h-2 bg-gray-600 transform rotate-45 hover:bg-white transition-colors"></button>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- 8. 重點消息與側邊廣告 (Key News & Sidebar Ads) -->
+        <section class="mb-16">
+            <div class="flex flex-col lg:flex-row gap-8">
+
+                <!-- 左側：新聞列表 -->
+                <div class="w-full lg:flex-1">
+                     <div class="flex justify-between items-center mb-4 border-b border-[#333] pb-2">
+                        <h2 class="text-xs text-[#d13639] font-bold uppercase tracking-widest">重點消息</h2>
+                        <a href="情報站.html" class="text-[#d13639] hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+                            More <i class="fas fa-chevron-right text-[10px] ml-1"></i>
+                        </a>
+                    </div>
+
+                    <div class="space-y-4 -mx-4 md:mx-0">
+                                                <!-- List Item 1 -->
+                        <div class="bg-[#1a1a1a] flex h-[88px] md:h-auto overflow-hidden cursor-pointer hover:bg-[#222] transition-colors group">
+                            <div class="w-[107px] md:w-32 flex-shrink-0 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between pt-[10px] pb-[4px] px-3 md:p-4 min-w-0 relative">
+                                <svg class="absolute top-[10px] right-3 md:top-4 md:right-4" width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><circle cx="14" cy="14" r="9" stroke="#d13639" stroke-width="1.5"/><circle cx="14" cy="14" r="5" stroke="#d13639" stroke-width="1.5"/><circle cx="14" cy="14" r="2" fill="#d13639"/><line x1="22" y1="2" x2="14" y2="14" stroke="#d13639" stroke-width="2.5" stroke-linecap="round"/></svg>
+                                <div class="flex items-center gap-2 pr-5">
+                                    <span class="border border-gray-600 text-gray-400 text-[10px] font-bold px-2 py-0.5 flex-shrink-0">System</span>
+                                    <span class="text-gray-400 text-[11px] font-semibold truncate">Magic Academy</span>
+                                </div>
+                                <h3 class="font-bold text-white text-sm leading-tight line-clamp-2 group-hover:text-[#d13639] transition-colors">[System] Compensation for login issues on 2/20</h3>
+                                <span class="text-gray-600 text-[10px]">FEB 20</span>
+                            </div>
+                        </div>
+
+                        <!-- List Item 2 -->
+                        <div class="bg-[#1a1a1a] flex h-[88px] md:h-auto overflow-hidden cursor-pointer hover:bg-[#222] transition-colors group">
+                            <div class="w-[107px] md:w-32 flex-shrink-0 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between pt-[10px] pb-[4px] px-3 md:p-4 min-w-0 relative">
+                                <svg class="absolute top-[10px] right-3 md:top-4 md:right-4" width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><circle cx="14" cy="14" r="9" stroke="#d13639" stroke-width="1.5"/><circle cx="14" cy="14" r="5" stroke="#d13639" stroke-width="1.5"/><circle cx="14" cy="14" r="2" fill="#d13639"/><line x1="22" y1="2" x2="14" y2="14" stroke="#d13639" stroke-width="2.5" stroke-linecap="round"/></svg>
+                                <div class="flex items-center gap-2 pr-5">
+                                    <span class="border border-gray-600 text-gray-400 text-[10px] font-bold px-2 py-0.5 flex-shrink-0">Game News</span>
+                                    <span class="text-gray-400 text-[11px] font-semibold truncate">Dragon Valley</span>
+                                </div>
+                                <h3 class="font-bold text-white text-sm leading-tight line-clamp-2 group-hover:text-[#d13639] transition-colors">[Update] Dragon Valley DLC is coming soon</h3>
+                                <span class="text-gray-600 text-[10px]">FEB 22</span>
+                            </div>
+                        </div>
+
+                        <!-- List Item 3 -->
+                        <div class="bg-[#1a1a1a] flex h-[88px] md:h-auto overflow-hidden cursor-pointer hover:bg-[#222] transition-colors group">
+                            <div class="w-[107px] md:w-32 flex-shrink-0 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between pt-[10px] pb-[4px] px-3 md:p-4 min-w-0 relative">
+                                <svg class="absolute top-[10px] right-3 md:top-4 md:right-4" width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><circle cx="14" cy="14" r="9" stroke="#d13639" stroke-width="1.5"/><circle cx="14" cy="14" r="5" stroke="#d13639" stroke-width="1.5"/><circle cx="14" cy="14" r="2" fill="#d13639"/><line x1="22" y1="2" x2="14" y2="14" stroke="#d13639" stroke-width="2.5" stroke-linecap="round"/></svg>
+                                <div class="flex items-center gap-2 pr-5">
+                                    <span class="border border-gray-600 text-gray-400 text-[10px] font-bold px-2 py-0.5 flex-shrink-0">Event</span>
+                                    <span class="text-gray-400 text-[11px] font-semibold truncate">Fantasy Quest</span>
+                                </div>
+                                <h3 class="font-bold text-white text-sm leading-tight line-clamp-2 group-hover:text-[#d13639] transition-colors">[Event] Weekend EXP Boost (200%) Active Now</h3>
+                                <span class="text-gray-600 text-[10px]">FEB 23</span>
+                            </div>
+                        </div>
+
+                        <!-- ad block -->
+                        <div class="w-full bg-[#111] border border-[#2a2a2a] p-4 flex items-center justify-center relative overflow-hidden riot-cut">
+                            <span class="text-[10px] text-gray-600 uppercase tracking-widest absolute top-1 left-2">AD</span>
+                            <div class="w-full h-20 bg-gradient-to-r from-[#1a1a2e] via-[#16213e] to-[#1a1a2e] flex items-center justify-center">
+                                <span class="text-xs text-gray-500 uppercase tracking-widest">廣告投放區域</span>
+                            </div>
+                        </div>
+
+                        <!-- List Item 4 -->
+                        <div class="bg-[#1a1a1a] flex h-[88px] md:h-auto overflow-hidden cursor-pointer hover:bg-[#222] transition-colors group">
+                            <div class="w-[107px] md:w-32 flex-shrink-0 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between pt-[10px] pb-[4px] px-3 md:p-4 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="border border-gray-600 text-gray-400 text-[10px] font-bold px-2 py-0.5 flex-shrink-0">Event</span>
+                                    <span class="text-gray-400 text-[11px] font-semibold truncate">Shadow Strike</span>
+                                </div>
+                                <h3 class="font-bold text-white text-sm leading-tight line-clamp-2 group-hover:text-[#d13639] transition-colors">[Event] New Season Battle Pass Now Available</h3>
+                                <span class="text-gray-600 text-[10px]">FEB 23</span>
+                            </div>
+                        </div>
+
+                        <!-- List Item 5 -->
+                        <div class="bg-[#1a1a1a] flex h-[88px] md:h-auto overflow-hidden cursor-pointer hover:bg-[#222] transition-colors group">
+                            <div class="w-[107px] md:w-32 flex-shrink-0 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=500&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between pt-[10px] pb-[4px] px-3 md:p-4 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="border border-gray-600 text-gray-400 text-[10px] font-bold px-2 py-0.5 flex-shrink-0">Patch</span>
+                                    <span class="text-gray-400 text-[11px] font-semibold truncate">Mecha Wars</span>
+                                </div>
+                                <h3 class="font-bold text-white text-sm leading-tight line-clamp-2 group-hover:text-[#d13639] transition-colors">[Patch] v2.4.1 Balance Update Applied</h3>
+                                <span class="text-gray-600 text-[10px]">FEB 24</span>
+                            </div>
+                        </div>
+
+                        <!-- load more -->
+                        <a href="情報站.html" class="block w-full bg-[#222] border border-[#333] text-gray-400 py-3 uppercase font-bold text-sm hover:bg-[#333] hover:text-white transition-colors riot-cut mt-4 text-center">
+                            View More News
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 右側：長條廣告 - 手機版移除 -->
+                <div class="hidden lg:flex w-[180px] flex-col gap-6">
+                    <div class="flex-1 bg-[#1a1a1a] riot-cut border border-[#333] flex items-center justify-center p-4 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-[#d13639] to-black opacity-20"></div>
+                         <div class="text-center relative z-10">
+                             <div class="mb-4">
+                                 <i class="fas fa-ad text-4xl text-[#444] group-hover:text-[#d13639] transition-colors"></i>
+                             </div>
+                             <h4 class="text-xl font-black uppercase italic text-white mb-2">Exclusive Partner</h4>
+                             <p class="text-xs text-gray-400 uppercase tracking-wide">Ad Space Available</p>
+                             <button class="mt-4 border border-white text-white px-4 py-1 text-xs font-bold uppercase hover:bg-white hover:text-black transition-colors">Learn More</button>
+                         </div>
+                    </div>
+                     <div class="flex-1 bg-[#1a1a1a] riot-cut border border-[#333] flex items-center justify-center p-4 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-blue-900 to-black opacity-20"></div>
+                         <div class="text-center relative z-10">
+                             <h4 class="text-xl font-black uppercase italic text-white mb-2">Esports Gear</h4>
+                             <p class="text-xs text-gray-400 uppercase tracking-wide">Professional Choice</p>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer (Riot Style) -->
+    <footer class="bg-[#0a0a0a] border-t border-[#222] py-12 text-sm">
+        <div class="max-w-[1400px] mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-start gap-10">
+                <!-- Logo & Lang -->
+                <div>
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-8 h-8 bg-[#333] flex items-center justify-center riot-cut">
+                            <i class="fas fa-gamepad text-gray-400"></i>
+                        </div>
+                        <span class="text-xl font-bold tracking-widest text-gray-500 brand-font">G-STORE</span>
+                    </div>
+                    <button class="bg-[#222] text-gray-400 px-4 py-2 text-xs font-bold uppercase flex items-center gap-2 hover:text-white riot-cut">
+                        <i class="fas fa-globe"></i> Traditional Chinese
+                    </button>
+                </div>
+
+                <!-- Links -->
+                <div class="flex flex-wrap gap-8 text-gray-500 font-bold uppercase tracking-wide text-xs">
+                    <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
+                    <a href="#" class="hover:text-white transition-colors">Terms of Service</a>
+                    <a href="#" class="hover:text-white transition-colors">Cookie Preferences</a>
+                    <a href="#" class="hover:text-white transition-colors">Support</a>
+                </div>
+
+                <!-- Social -->
+                <div class="flex gap-4">
+                    <a href="#" class="w-10 h-10 bg-[#222] flex items-center justify-center text-gray-400 hover:bg-[#d13639] hover:text-white transition-colors riot-cut">
+                        <i class="fab fa-discord"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 bg-[#222] flex items-center justify-center text-gray-400 hover:bg-[#1877F2] hover:text-white transition-colors riot-cut">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 bg-[#222] flex items-center justify-center text-gray-400 hover:bg-[#000] hover:text-white transition-colors riot-cut">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-12 text-center border-t border-[#222] pt-8 text-xs text-gray-600 font-medium">
+                <p>&copy; 2026 G-STORE Ltd. All Rights Reserved. Trademarks belong to their respective owners.</p>
+            </div>
+        </div>
+    </footer>
+
+  <!-- 腳本控制：智慧型 Header -->
+    <script>
+        // === 跑馬燈：逐則播放 ===
+        (function () {
+            const messages = [
+                'Server maintenance scheduled for 2/25 03:00 - 05:00 UTC.',
+                'New Patch 4.02 is now live.',
+                'Experience the new "Void" event starting this Friday.'
+            ];
+            const container = document.getElementById('marquee-container');
+            let currentIndex = 0;
+
+            function playNext() {
+                const el = document.createElement('div');
+                el.className = 'marquee-item text-sm text-gray-400 font-medium pt-0.5 uppercase tracking-wide';
+                el.textContent = messages[currentIndex];
+                container.appendChild(el);
+
+                el.addEventListener('animationend', () => {
+                    el.remove();
+                    currentIndex = (currentIndex + 1) % messages.length;
+                    playNext();
+                });
+            }
+
+            playNext();
+        })();
+
+        const header = document.getElementById('main-header');
+
+      const mobileNav = document.getElementById('mobile-nav');
+      const mascotMsg = document.getElementById('mascot-msg');
+
+      const avatarBtn = document.getElementById('avatar-btn');
+        const userMenu = document.getElementById('user-menu');
+      const topBtn = document.getElementById('top-btn');
+
+        let lastScrollY = window.scrollY;
+        let scrollUpDistance = 0;
+
+
+      // 智慧型導覽顯示/隱藏邏輯
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+
+            // 1. 處理透明度與邊框
+            if (currentScrollY === 0) {
+                header.classList.remove('bg-opacity-100');
+                header.classList.add('bg-opacity-5');
+              //header.style.boxShadow = "0px 5px 15px rgba(0, 255, 255, 0.3)";
+            } else {
+                header.classList.remove('bg-opacity-5');
+                header.classList.add('bg-opacity-100');
+              //header.style.boxShadow = "0px 5px 25px rgba(0, 255, 255, 0.5)";
+            }
+
+            // 2. 處理智慧型顯示/隱藏
+            if (currentScrollY > lastScrollY) {
+                // 向下捲動：隱藏 Header，重置向上捲動計數
+                header.classList.remove('header-visible');
+                header.classList.add('header-hidden');
+
+              mobileNav.classList.remove('nav-visible');
+                mobileNav.classList.add('nav-hidden-bottom');
+
+              userMenu.classList.remove('menu-visible');
+                userMenu.classList.add('menu-hidden');
+                scrollUpDistance = 0;
+            } else {
+                // 向上捲動：計算捲動距離
+                scrollUpDistance += (lastScrollY - currentScrollY);
+
+
+                // 向上捲動超過 50px，或回到最頂端時顯示
+                if (scrollUpDistance > 50 || currentScrollY < 10) {
+                    header.classList.remove('header-hidden');
+                    header.classList.add('header-visible');
+
+                  mobileNav.classList.remove('nav-hidden-bottom');
+                    mobileNav.classList.add('nav-visible');
+
+                }
+            }
+
+          // 智慧型 Header 與 Mobile Nav 顯示隱藏
+            if (currentScrollY > lastScrollY && currentScrollY > 150) {
+                header.classList.add('nav-hidden-top');
+                mobileNav.classList.add('nav-hidden-bottom');
+            } else {
+                header.classList.remove('nav-hidden-top');
+                mobileNav.classList.remove('nav-hidden-bottom');
+            }
+
+            // TOP 按鈕顯示隱藏 (下滑超過 300px)
+            if (currentScrollY > 300) {
+                topBtn.classList.add('visible');
+            } else {
+                topBtn.classList.remove('visible');
+            }
+
+            lastScrollY = currentScrollY;
+        });
+
+        // 回到頂部功能
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+
+      avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = userMenu.classList.contains('menu-visible');
+            if (isVisible) {
+                userMenu.classList.remove('menu-visible');
+                userMenu.classList.add('menu-hidden');
+            } else {
+                userMenu.classList.remove('menu-hidden');
+                userMenu.classList.add('menu-visible');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!userMenu.contains(e.target) && e.target !== avatarBtn) {
+                userMenu.classList.remove('menu-visible');
+                userMenu.classList.add('menu-hidden');
+            }
+        });
+
+
+      // 吉祥物隨機話語
+        const messages = [
+            "需要支援嗎，特工？",
+            "本週特惠即將結束！",
+            "今天適合戰鬥！",
+            "嘿！你在看哪裡？",
+            "點擊我可以查看詳情。"
+        ];
+
+      function toggleMascotMsg() {
+            const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+            mascotMsg.innerText = randomMsg;
+            mascotMsg.style.opacity = "1";
+            mascotMsg.style.transform = "translateY(0)";
+
+            setTimeout(() => {
+                mascotMsg.style.opacity = "0";
+                mascotMsg.style.transform = "translateY(10px)";
+            }, 3000);
+        }
+
+
+
+
+
+
+      // ===== Hero Carousel =====
+        let currentHero = 0;
+        const heroTotalSlides = 5;
+
+        function heroSlide(dir) {
+            currentHero = (currentHero + dir + heroTotalSlides) % heroTotalSlides;
+            updateHeroCarousel();
+        }
+
+        function heroGoTo(index) {
+            currentHero = index;
+            updateHeroCarousel();
+        }
+
+        function updateHeroCarousel() {
+            const track = document.getElementById('hero-track');
+            const viewport = track.parentElement;
+            const slides = track.querySelectorAll('.hero-slide');
+            const gap = parseFloat(getComputedStyle(track).gap) || 16;
+            const slideWidth = slides[0].offsetWidth;
+            const viewportWidth = viewport.offsetWidth;
+            const paddingLeft = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+            const step = slideWidth + gap;
+
+            // 置中 active slide，讓左右兩側皆露出鄰近 slide
+            const centerOffset = (viewportWidth - slideWidth) / 2 - paddingLeft;
+            track.style.transform = `translateX(${centerOffset - currentHero * step}px)`;
+
+            // 切換 active 狀態 (控制透明度與縮放)
+            slides.forEach((s, i) => s.classList.toggle('active', i === currentHero));
+
+            // 更新 dots
+            document.querySelectorAll('#hero-dots .dot').forEach((d, i) => {
+                d.classList.toggle('active', i === currentHero);
+            });
+
+        }
+
+        // 監聽視窗縮放，重新對齊位置
+        window.addEventListener('resize', () => updateHeroCarousel());
+
+        // ===== 中段廣告：分組輪替 + Cookie 狀態保持 =====
+        (function() {
+            const AD_COOKIE = 'ad_session';
+            const AD_TTL = 10; // 分鐘
+
+            // 讀取 Cookie
+            function getCookie(name) {
+                const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? match[2] : null;
+            }
+
+            // 設定 Cookie（max-age 秒數）
+            function setCookie(name, value, minutes) {
+                document.cookie = name + '=' + value + ';max-age=' + (minutes * 60) + ';path=/;SameSite=Lax';
+            }
+
+            // 決定要顯示的組別
+            let currentGroup = getCookie(AD_COOKIE);
+            if (!currentGroup || (currentGroup !== 'A' && currentGroup !== 'B')) {
+                // 首次造訪或 Cookie 過期：隨機選擇
+                currentGroup = Math.random() < 0.5 ? 'A' : 'B';
+                setCookie(AD_COOKIE, currentGroup, AD_TTL);
+            }
+
+            // 顯示/隱藏對應組別的廣告
+            const allMidAds = document.querySelectorAll('.mid-ad');
+            allMidAds.forEach(function(ad) {
+                if (ad.dataset.group === currentGroup) {
+                    ad.style.display = '';
+                } else {
+                    ad.style.display = 'none';
+                }
+            });
+        })();
+
+    </script>
+
+</body>
+</html>

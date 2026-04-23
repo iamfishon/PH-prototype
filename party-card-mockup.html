@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Party Card Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1030;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+    font-family: -apple-system, 'Noto Sans TC', sans-serif;
+  }
+  .phone {
+    width: 360px;
+    background: #1e1540;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    padding-bottom: 20px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    padding: 20px 20px 10px;
+    gap: 12px;
+  }
+  .back-arrow { color: #fff; font-size: 20px; cursor: pointer; }
+  .logo {
+    flex: 1;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #ff6eb4, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+  }
+
+  /* Profile */
+  .profile {
+    margin: 10px 16px 16px;
+    border-left: 3px solid #7c3aed;
+    padding-left: 12px;
+  }
+  .profile-name { color: #fff; font-weight: bold; font-size: 15px; margin-bottom: 4px; }
+  .profile-email { color: #a78bfa; font-size: 13px; margin-bottom: 6px; }
+  .profile-coin { color: #fff; font-weight: bold; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .coin-icon { font-size: 16px; }
+
+  /* Party Card Block */
+  .party-card {
+    margin: 0 16px 16px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #6d28d9;
+  }
+  .party-card-header {
+    background: #7c3aed;
+    padding: 10px 16px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 15px;
+  }
+  .party-card-body {
+    background: #2a1f50;
+    padding: 14px 16px;
+  }
+  .card-level {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .level-left { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: bold; font-size: 16px; }
+  .level-icon { font-size: 20px; }
+  .help-icon { color: #9ca3af; font-size: 16px; cursor: pointer; }
+
+  .info-row { margin-bottom: 10px; }
+  .info-label { color: #c4b5fd; font-size: 12px; margin-bottom: 4px; }
+  .info-value {
+    background: #1a1040;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #fff;
+    font-size: 14px;
+  }
+  .info-value.percent { display: flex; justify-content: space-between; }
+  .info-value.percent span { color: #9ca3af; }
+
+  /* Cancel hint - NEW */
+  .cancel-hint {
+    margin-top: 12px;
+    padding: 8px 0 4px;
+    text-align: center;
+    font-size: 12px;
+    color: #a78bfa;
+    border-top: 1px solid #3d2a6e;
+  }
+  .cancel-hint a {
+    color: #c4b5fd;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .cancel-hint-new {
+    margin-top: 12px;
+    padding: 9px 12px;
+    background: rgba(124, 58, 237, 0.15);
+    border-radius: 8px;
+    border: 1px dashed #6d28d9;
+    text-align: center;
+    font-size: 12px;
+    color: #c4b5fd;
+  }
+  .cancel-hint-new a {
+    color: #e9d5ff;
+    text-decoration: underline;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* Expand button */
+  .expand-btn {
+    background: #4c1d95;
+    text-align: center;
+    padding: 12px;
+    color: #e9d5ff;
+    font-size: 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    margin: 16px;
+    gap: 10px;
+    color: #9ca3af;
+    font-size: 13px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #3d2a6e;
+  }
+
+  /* HCoin button */
+  .hcoin-btn {
+    margin: 0 16px;
+    background: linear-gradient(135deg, #4c1d95, #7c3aed);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .hcoin-btn-icon { font-size: 28px; }
+  .hcoin-btn-label { flex: 1; color: #fff; font-weight: bold; font-size: 14px; }
+  .hcoin-btn-price {
+    background: #a855f7;
+    color: #fff;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  /* Version */
+  .version {
+    text-align: left;
+    padding: 12px 16px 0;
+    color: #6b7280;
+    font-size: 11px;
+  }
+
+  /* Label */
+  .new-label {
+    display: inline-block;
+    background: #f59e0b;
+    color: #000;
+    font-size: 10px;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <!-- Header -->
+  <div class="header">
+    <div class="back-arrow">←</div>
+    <div class="logo">PlayHorny 可以瑟瑟</div>
+  </div>
+
+  <!-- Profile -->
+  <div class="profile">
+    <div class="profile-name">PlayHorny可以瑟瑟會員</div>
+    <div class="profile-email">sandywendy80124@gmail.com</div>
+    <div class="profile-coin">
+      <span class="coin-icon">💎</span> HCoin &nbsp; 2,260
+    </div>
+  </div>
+
+  <!-- Party Card -->
+  <div class="party-card">
+    <div class="party-card-header">狂歡派對卡</div>
+    <div class="party-card-body">
+      <div class="card-level">
+        <div class="level-left">
+          <span class="level-icon">🥈</span>
+          Lv.1 瑟民
+        </div>
+        <span class="help-icon">?</span>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">等級回饋</div>
+        <div class="info-value percent">5 <span>%</span></div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">會員福利到期時間：</div>
+        <div class="info-value">2026/04/04</div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-label">下次發送獎勵時間</div>
+        <div class="info-value">本期最後獎勵已發送</div>
+      </div>
+
+      <!-- 新增：取消訂閱提示 -->
+      <div class="cancel-hint-new">
+        解除訂閱請至 <a>PlayHorny 官網 &gt; 購買紀錄</a> 設定
+        <span class="new-label">NEW</span>
+      </div>
+    </div>
+    <div class="expand-btn">展開 ▼</div>
+  </div>
+
+  <!-- HCoin -->
+  <div class="divider">HCoin儲值</div>
+  <div class="hcoin-btn">
+    <div class="hcoin-btn-icon">🎴</div>
+    <div class="hcoin-btn-label">狂歡派對卡</div>
+    <div class="hcoin-btn-price">TWD 300</div>
+  </div>
+
+  <div class="version">v1.7.4</div>
+</div>
+</body>
+</html>

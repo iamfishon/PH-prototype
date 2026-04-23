@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayHorny - 廣告版位後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'bg-primary':    '#0f0f14',
+            'bg-secondary':  '#1a1a2e',
+            'bg-tertiary':   '#252540',
+            'border-clr':    '#2d2d4a',
+            'border-light':  '#3d3d5c',
+            'purple-main':   '#7c3aed',
+            'purple-light':  '#8b5cf6',
+            'purple-dark':   '#6d28d9',
+            'text-primary':  '#f0f0f0',
+            'text-secondary':'#a0a0b8',
+            'text-muted':    '#6b6b80',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Noto Sans TC', sans-serif; background-color: #0f0f14; color: #f0f0f0; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f0f14; }
+    ::-webkit-scrollbar-thumb { background: #2d2d4a; border-radius: 3px; }
+    .sidebar-item { transition: background .15s, color .15s; }
+    .sidebar-item:hover { background: rgba(124,58,237,.15); color: #c4b5fd; }
+    .sidebar-item.active { background: rgba(124,58,237,.25); color: #c4b5fd; border-left: 3px solid #7c3aed; }
+    .tab-btn { transition: background .15s, color .15s, border-color .15s; }
+    .form-input { background:#1a1a2e; border:1px solid #2d2d4a; color:#f0f0f0; border-radius:6px; padding:8px 12px; width:100%; font-size:14px; outline:none; }
+    .form-input:focus { border-color:#7c3aed; }
+    .form-label { font-size:13px; color:#a0a0b8; margin-bottom:4px; display:block; }
+    .section-card { background:#1a1a2e; border:1px solid #2d2d4a; border-radius:10px; padding:20px; }
+    .table-th { font-size:12px; color:#a0a0b8; font-weight:500; padding:10px 12px; text-align:left; border-bottom:1px solid #2d2d4a; white-space:nowrap; }
+    .table-td { font-size:13px; color:#e0e0f0; padding:10px 12px; border-bottom:1px solid #1e1e38; white-space:nowrap; vertical-align:middle; }
+    .badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:500; }
+    .img-card { position:relative; width:80px; height:50px; background:#252540; border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+    .img-card img { width:100%; height:100%; object-fit:cover; }
+    .img-placeholder { width:80px; height:50px; background:#252540; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#6b6b80; font-size:11px; }
+    .edit-footer { position:fixed; bottom:0; right:0; background:#1a1a2e; border-top:1px solid #2d2d4a; padding:14px 32px; display:flex; gap:12px; justify-content:flex-end; z-index:40; transition:left .3s; }
+  </style>
+</head>
+<body class="bg-bg-primary text-text-primary min-h-screen flex">
+
+<!-- Sidebar -->
+<aside id="sidebar" style="width:220px;min-height:100vh;background:#12121c;border-right:1px solid #2d2d4a;display:flex;flex-direction:column;flex-shrink:0;transition:width .3s;position:fixed;top:0;left:0;bottom:0;z-index:50;overflow:hidden;">
+  <div style="padding:16px 20px;border-bottom:1px solid #2d2d4a;display:flex;align-items:center;gap:10px;">
+    <div style="width:32px;height:32px;background:linear-gradient(135deg,#7c3aed,#ec4899);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <span id="sidebar-logo-text" style="font-size:14px;font-weight:700;color:#f0f0f0;white-space:nowrap;">PlayHorny Admin</span>
+  </div>
+  <div id="sidebar-content" style="flex:1;overflow-y:auto;padding:12px 0;"></div>
+</aside>
+
+<!-- Main wrapper -->
+<div id="main-wrapper" style="margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .3s;">
+
+  <!-- Header -->
+  <header style="background:#12121c;border-bottom:1px solid #2d2d4a;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:#a0a0b8;padding:4px;">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div id="breadcrumb" style="font-size:13px;color:#a0a0b8;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <span style="font-size:13px;color:#a0a0b8;">sandy@playhorny.com</span>
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,#7c3aed,#ec4899);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">S</div>
+    </div>
+  </header>
+
+  <!-- Page header -->
+  <div style="padding:20px 28px 0;display:flex;align-items:center;justify-content:space-between;">
+    <h1 id="page-title" style="font-size:20px;font-weight:700;color:#f0f0f0;"></h1>
+    <div id="page-actions" style="display:flex;gap:8px;"></div>
+  </div>
+
+  <!-- Main content -->
+  <main id="content" style="flex:1;padding:16px 28px 80px;"></main>
+
+</div><!-- /main-wrapper -->
+
+<!-- Edit Footer -->
+<div id="edit-footer" class="edit-footer" style="display:none;left:220px;">
+  <button onclick="backToList()" style="background:#252540;border:1px solid #3d3d5c;color:#a0a0b8;padding:8px 20px;border-radius:6px;font-size:13px;cursor:pointer;">取消</button>
+  <button style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);border:none;color:#fff;padding:8px 24px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;">儲存</button>
+</div>
+
+<!-- Image Info Modal -->
+<div id="image-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#12121c;border:1px solid #2d2d4a;border-radius:10px;padding:24px 28px;width:420px;max-width:92vw;">
+    <div style="font-size:15px;font-weight:600;color:#f0f0f0;margin-bottom:18px;">圖片資訊</div>
+    <div style="font-size:13px;color:#a0a0b8;margin-bottom:4px;">圖片名稱 - <span id="modal-img-name" style="color:#c4b5fd;word-break:break-all;"></span></div>
+    <div style="font-size:13px;color:#a0a0b8;margin-bottom:12px;">圖片連結 -</div>
+    <input id="modal-link-input" type="text" class="form-input" placeholder="請輸入圖片連結" style="margin-bottom:18px;">
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeImageLinkModal()" style="background:#7c3aed;border:none;color:#fff;padding:7px 20px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;">Cancel</button>
+      <button onclick="saveImageLink()" style="background:#252540;border:1px solid #3d3d5c;color:#a0a0b8;padding:7px 20px;border-radius:6px;font-size:13px;cursor:pointer;">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Constants ───────────────────────────────────────────────────────────────
+const NOW = new Date('2026-03-18T12:00');
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  section: 'banner',
+  view: 'list',
+  formMode: 'add',
+  editId: null,
+  newsSubTab: 'inlay',
+  langTab: 'zh-TW',
+  formScheduleOpen: true,
+  emailRows: new Set(),
+};
+
+// ─── Section Meta ─────────────────────────────────────────────────────────────
+const sectionMeta = {
+  banner: { label: '橫幅廣告' },
+  mid:    { label: '中段廣告' },
+  news:   { label: '消息廣告' },
+};
+
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+const bannerAd = {
+  id: 1, isOpen: true,
+  startTime: '2026-03-01T00:00', endTime: '2026-03-31T23:59',
+  createdAt: '2026-03-01 09:00', updatedAt: '2026-03-12 17:30',
+  updatedBy: '1000006', updatedByEmail: 'sandy@playhorny.com',
+  imageName: 'banner_spring_2026.jpg',
+  promoText: '春季改版上線！新地圖大公開',
+  buttonText: '立即前往',
+  linkUrl: '/game/spring-update'
+};
+
+const midAds = [
+  { id:1, order:1, isVisible:true,  isOpen:true,  startTime:'2026-03-01T00:00', endTime:'2026-03-31T23:59', promoText:'全新角色登場！限時好禮等你拿', imageName:'mid_1.jpg',   createdAt:'2026-02-28 10:00', updatedAt:'2026-03-10 14:22', updatedBy:'1000020', updatedByEmail:'james@playhorny.com' },
+  { id:2, order:2, isVisible:true,  isOpen:true,  startTime:'2026-03-01T00:00', endTime:'2026-03-31T23:59', promoText:'春季改版上線 新地圖大公開',   imageName:'mid_2.jpg',   createdAt:'2026-02-28 10:10', updatedAt:'2026-03-10 14:23', updatedBy:'1000020', updatedByEmail:'james@playhorny.com' },
+  { id:3, order:3, isVisible:true,  isOpen:true,  startTime:'2026-03-01T00:00', endTime:'2026-03-31T23:59', promoText:'排行榜賽季結算 TOP獎勵豐富',  imageName:'mid_3.jpg',   createdAt:'2026-02-28 10:20', updatedAt:'2026-03-10 14:24', updatedBy:'1000020', updatedByEmail:'james@playhorny.com' },
+  { id:4,  order:4,  isVisible:false, isOpen:false, startTime:'2026-04-01T00:00', endTime:'2026-04-30T23:59', promoText:'四月慶典活動 花季限定皮膚',    imageName:'mid_4.jpg',  createdAt:'2026-03-10 09:00', updatedAt:'2026-03-10 09:00', updatedBy:'1000007', updatedByEmail:'sandy@playhorny.com' },
+  { id:5,  order:5,  isVisible:true,  isOpen:true,  startTime:'2026-03-01T00:00', endTime:'2026-04-15T23:59', promoText:'魔王副本挑戰開放 組隊迎戰',    imageName:'mid_5.jpg',  createdAt:'2026-03-01 09:00', updatedAt:'2026-03-01 09:00', updatedBy:'1000020', updatedByEmail:'james@playhorny.com' },
+  { id:6,  order:6,  isVisible:true,  isOpen:true,  startTime:'2026-03-05T00:00', endTime:'2026-04-05T23:59', promoText:'新職業上線 搶先體驗無限可能',  imageName:'mid_6.jpg',  createdAt:'2026-03-04 10:00', updatedAt:'2026-03-04 10:00', updatedBy:'1000020', updatedByEmail:'james@playhorny.com' },
+  { id:7,  order:7,  isVisible:true,  isOpen:true,  startTime:'2026-01-01T00:00', endTime:'2026-02-28T23:59', promoText:'限時聯名活動 獨家角色皮膚',    imageName:'mid_7.jpg',  createdAt:'2026-01-01 09:00', updatedAt:'2026-01-01 09:00', updatedBy:'1000020', updatedByEmail:'james@playhorny.com' },
+  { id:8,  order:8,  isVisible:true,  isOpen:true,  startTime:'2026-04-01T00:00', endTime:'2026-04-30T23:59', promoText:'週年慶活動開跑 豐富獎勵等你',  imageName:'mid_8.jpg',  createdAt:'2026-03-15 10:00', updatedAt:'2026-03-15 10:00', updatedBy:'1000007', updatedByEmail:'sandy@playhorny.com' },
+  { id:9,  order:9,  isVisible:false, isOpen:false, startTime:'2026-05-01T00:00', endTime:'2026-05-31T23:59', promoText:'夏日祭典開幕 限定活動搶先看',  imageName:'mid_9.jpg',  createdAt:'2026-03-18 11:00', updatedAt:'2026-03-18 11:00', updatedBy:'1000006', updatedByEmail:'sandy@playhorny.com' },
+  { id:10, order:10, isVisible:false, isOpen:false, startTime:'2026-05-15T00:00', endTime:'2026-06-15T23:59', promoText:'新賽季來臨 全新排行榜挑戰',    imageName:'mid_10.jpg', createdAt:'2026-03-18 14:00', updatedAt:'2026-03-18 14:00', updatedBy:'1000006', updatedByEmail:'sandy@playhorny.com' },
+];
+
+const inlayAds = [
+  { id:1, order:1, isVisible:true,  isOpen:true,  startTime:'2026-03-01T00:00', endTime:'2026-03-31T23:59', imageName:'inlay_1.jpg', createdAt:'2026-02-28 10:00', updatedAt:'2026-02-28 15:20', updatedBy:'1000006', updatedByEmail:'sandy@playhorny.com' },
+  { id:2, order:2, isVisible:true,  isOpen:true,  startTime:'2026-04-01T00:00', endTime:'2026-04-10T23:59', imageName:'inlay_2.jpg', createdAt:'2026-03-10 14:00', updatedAt:'2026-03-10 14:00', updatedBy:'1000008', updatedByEmail:'james@playhorny.com' },
+  { id:3, order:3, isVisible:false, isOpen:false, startTime:'',                endTime:'',                imageName:'',            createdAt:'2026-03-16 09:00', updatedAt:'2026-03-16 09:00', updatedBy:'1000006', updatedByEmail:'sandy@playhorny.com' },
+];
+
+const sideTopAds = [
+  { id:1, order:1, isVisible:true, isOpen:true,  startTime:'2026-03-10T00:00', endTime:'2026-03-25T23:59', imageName:'side_top_1.jpg', createdAt:'2026-03-05 11:30', updatedAt:'2026-03-08 16:00', updatedBy:'1000006', updatedByEmail:'sandy@playhorny.com' },
+  { id:2, order:2, isVisible:true, isOpen:true,  startTime:'2026-04-01T00:00', endTime:'2026-04-30T23:59', imageName:'side_top_2.jpg', createdAt:'2026-03-15 09:00', updatedAt:'2026-03-15 09:00', updatedBy:'1000007', updatedByEmail:'sandy@playhorny.com' },
+];
+
+const sideBotAds = [
+  { id:1, order:1, isVisible:true, isOpen:true, startTime:'2026-03-01T00:00', endTime:'2026-03-31T23:59', imageName:'side_bot_1.jpg', createdAt:'2026-02-28 10:00', updatedAt:'2026-02-28 16:00', updatedBy:'1000006', updatedByEmail:'sandy@playhorny.com' },
+];
+
+// ─── Sidebar Groups ────────────────────────────────────────────────────────────
+const sidebarGroups = [
+  { group: '遊戲資料',   items: [] },
+  {
+    group: '前台首頁', open: true,
+    items: [
+      { label: '首頁Banner',  section: null },
+      { label: '主打遊戲',    section: null },
+      { label: '最新活動',    section: null },
+      { label: '最新消息',    section: null },
+      { label: '單機遊戲',    section: null },
+      { label: '廣告版位',    section: 'ad'  },
+    ]
+  },
+  { group: '客服中心',   items: [] },
+  { group: '會員中心',   items: [] },
+  { group: '金流相關',   items: [] },
+  { group: '代理中心',   items: [] },
+  { group: '常用工具',   items: [] },
+  { group: '廣告管理',   items: [] },
+  { group: '信件中心',   items: [] },
+  { group: '兌換碼管理', items: [] },
+  { group: '成員與權限', items: [] },
+];
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function getAdStatus(ad) {
+  if (!ad.isOpen) return 'draft';
+  if (!ad.startTime || !ad.endTime) return 'draft';
+  const s = new Date(ad.startTime), e = new Date(ad.endTime);
+  if (NOW < s) return 'scheduled';
+  if (NOW > e) return 'expired';
+  return 'active';
+}
+
+function statusBadge(status) {
+  const map = {
+    active:    { label: '上架中',  bg: 'rgba(16,185,129,.15)', color: '#10b981', dot: '#10b981' },
+    scheduled: { label: '排程中',  bg: 'rgba(245,158,11,.15)',  color: '#f59e0b', dot: '#f59e0b' },
+    expired:   { label: '已過期',  bg: 'rgba(107,114,128,.15)', color: '#9ca3af', dot: '#9ca3af' },
+    draft:     { label: '草稿',    bg: 'rgba(107,114,128,.12)', color: '#6b7280', dot: '#6b7280' },
+  };
+  const m = map[status] || map.draft;
+  return `<span class="badge" style="background:${m.bg};color:${m.color};">
+    <span style="width:5px;height:5px;border-radius:50%;background:${m.dot};display:inline-block;margin-right:5px;"></span>${m.label}
+  </span>`;
+}
+
+function fmtTime(t) {
+  if (!t) return '<span style="color:#6b6b80;">—</span>';
+  return `<span style="color:#a0a0b8;">${t.replace('T', ' ')}</span>`;
+}
+
+function iconPlus() {
+  return `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+}
+
+function iconImage() {
+  return `<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+}
+
+function iconEdit() {
+  return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+}
+
+// ─── Schedule Component ───────────────────────────────────────────────────────
+function renderScheduleComponent(ad, radioName) {
+  const adIsOpen = ad ? ad.isOpen : false;
+  const status = ad ? getAdStatus(ad) : 'draft';
+
+  // Status badge
+  const badgeMap = {
+    active:    { label: '進行中',   bg: '#16a34a', color: '#fff' },
+    scheduled: { label: '即將開放', bg: '#d97706', color: '#fff' },
+    expired:   { label: '已過期',   bg: '#dc2626', color: '#fff' },
+    draft:     { label: '存成草稿', bg: '#3d3d5c', color: '#a0a0b8' },
+  };
+  const badge = badgeMap[status] || badgeMap.draft;
+
+  // Status message
+  const msgMap = {
+    active:    '當前時間在排程範圍內，正在進行中',
+    scheduled: '尚未到達上架時間，即將開放',
+    expired:   '下架時間已過，此排程已過期',
+  };
+  const statusMsg = adIsOpen && msgMap[status] ? msgMap[status] : null;
+
+  const createdAt = ad ? (ad.createdAt || '—') : '—';
+
+  return `
+  <div style="background:#0f1535;border:1px solid #3b3b6b;border-top:2px solid #7c3aed;border-radius:8px;overflow:hidden;">
+    <!-- Card header -->
+    <div style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d2d4a;">
+      <span style="font-size:13px;font-weight:600;color:#c4b5fd;">前台</span>
+      <svg width="15" height="15" fill="none" stroke="#6b6b80" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+
+    <!-- Card body -->
+    <div style="padding:16px;">
+      <!-- Row: title + badge -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:600;color:#e0e0f0;">開放排程設定</span>
+        <span style="background:${badge.bg};color:${badge.color};font-size:12px;font-weight:500;padding:3px 12px;border-radius:4px;">${badge.label}</span>
+      </div>
+
+      <!-- Created at -->
+      <div style="font-size:11px;color:#6b6b80;margin-bottom:14px;">
+        創建時間<br>
+        <span style="color:#a0a0b8;">${createdAt}</span>
+      </div>
+
+      <!-- Radio: 不開放 -->
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:14px;">
+        <input type="radio" name="${radioName}" value="off" ${!adIsOpen ? 'checked' : ''}
+          style="accent-color:#7c3aed;width:16px;height:16px;"
+          onchange="onSchedRadioChange('${radioName}', this.value)">
+        <span style="font-size:13px;color:#d0d0e8;">不開放（存成草稿）</span>
+      </label>
+
+      <!-- Radio: 開放 + date pickers -->
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;margin-top:2px;">
+          <input type="radio" name="${radioName}" value="on" ${adIsOpen ? 'checked' : ''}
+            style="accent-color:#7c3aed;width:16px;height:16px;"
+            onchange="onSchedRadioChange('${radioName}', this.value)">
+          <span style="font-size:13px;color:#d0d0e8;">開放</span>
+        </label>
+        <div id="sched-dates-${radioName}" style="display:${adIsOpen ? 'flex' : 'none'};gap:16px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px;color:#a0a0b8;margin-bottom:4px;">上架時間</div>
+            <input type="datetime-local" class="form-input" value="${ad ? ad.startTime : ''}" style="color-scheme:dark;width:200px;">
+          </div>
+          <div>
+            <div style="font-size:11px;color:#a0a0b8;margin-bottom:4px;">下架時間</div>
+            <input type="datetime-local" class="form-input" value="${ad ? ad.endTime : ''}" style="color-scheme:dark;width:200px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Status message -->
+      ${statusMsg ? `
+      <div style="margin-top:14px;border-left:3px solid #3b82f6;padding:8px 12px;background:rgba(59,130,246,.06);border-radius:0 4px 4px 0;">
+        <span style="font-size:13px;color:#93c5fd;">${statusMsg}</span>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function onSchedRadioChange(radioName, value) {
+  const datesEl = document.getElementById('sched-dates-' + radioName);
+  if (datesEl) datesEl.style.display = value === 'on' ? 'flex' : 'none';
+}
+
+// ─── Lang Tabs ────────────────────────────────────────────────────────────────
+function renderLangTabs() {
+  const langs = [
+    { key: 'en',    label: '英文' },
+    { key: 'zh-TW', label: '繁體中文' },
+    { key: 'ja',    label: '日文' },
+    { key: 'ko',    label: '韓文' },
+    { key: 'zh-CN', label: '簡體中文' },
+  ];
+  return `<div style="display:flex;margin-bottom:20px;border:1px solid #2d2d4a;border-radius:6px;overflow:hidden;">
+    ${langs.map((l, i) => {
+      const active = state.langTab === l.key;
+      return `<button onclick="state.langTab='${l.key}';render();" class="tab-btn"
+        style="flex:1;padding:11px 4px;font-size:13px;font-weight:500;border:none;
+          border-left:${i > 0 ? '1px solid #2d2d4a' : 'none'};
+          background:${active ? '#ec4899' : '#1a1a2e'};
+          color:${active ? '#fff' : '#a0a0b8'};
+          cursor:pointer;transition:background .15s,color .15s;">${l.label}</button>`;
+    }).join('')}
+  </div>`;
+}
+
+// ─── Image Upload ─────────────────────────────────────────────────────────────
+function _imgUploadedHtml(previewId, nameId, imgSrc, fileName) {
+  return `<img src="${imgSrc}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">
+    <!-- info icon top-left -->
+    <button onclick="event.stopPropagation();openImageLinkModal('${nameId}')"
+      style="position:absolute;top:5px;left:5px;width:26px;height:26px;border-radius:50%;background:#1a6dd4;border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;">
+      <svg width="13" height="13" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </button>
+    <!-- drag icon top-right -->
+    <div style="position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;background:#ec4899;border:2px solid #fff;display:flex;align-items:center;justify-content:center;cursor:grab;">
+      <svg width="13" height="13" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="5" x2="19" y2="19" stroke-width="0"/><path d="M5 9l-3 3 3 3M19 9l3 3-3 3M9 5l3-3 3 3M9 19l3 3 3-3"/></svg>
+    </div>
+    <!-- delete icon bottom-right -->
+    <button onclick="event.stopPropagation();removeImageCard('${previewId}','${nameId}')"
+      style="position:absolute;bottom:5px;right:5px;width:26px;height:26px;border-radius:50%;background:#dc2626;border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;">
+      <svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>`;
+}
+
+function renderImageUpload(previewId, nameId, existingName, hint) {
+  const hasImg = !!existingName;
+  const imgSrc = hasImg
+    ? `https://via.placeholder.com/220x138/252540/a0a0b8?text=${encodeURIComponent(existingName.substring(0,6))}`
+    : '';
+  return `
+  <div>
+    <input type="file" id="file-${nameId}" accept="image/*" style="display:none;" onchange="handleImageCardPreview('${previewId}','${nameId}',this)">
+    <input type="hidden" id="${nameId}" value="${existingName || ''}">
+    <div id="${previewId}" onclick="${hasImg ? '' : `document.getElementById('file-${nameId}').click()`}"
+      style="width:220px;height:138px;background:#1a1a2e;border:2px dashed #3d3d5c;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#6b6b80;position:relative;overflow:hidden;cursor:${hasImg ? 'default' : 'pointer'};">
+      ${hasImg
+        ? _imgUploadedHtml(previewId, nameId, imgSrc, existingName)
+        : `<svg width="32" height="32" fill="none" stroke="#6b6b80" stroke-width="1.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+           <div style="font-size:13px;margin-top:8px;color:#a0a0b8;">增加附件</div>
+           <div style="font-size:11px;color:#6b6b80;margin-top:3px;">限制 2MB</div>`
+      }
+    </div>
+    <div style="font-size:11px;color:#6b6b80;margin-top:6px;">${hint || '建議尺寸：1200×400px，JPG/PNG'}</div>
+  </div>`;
+}
+
+function handleImageCardPreview(previewId, nameId, input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const url = URL.createObjectURL(file);
+  const el = document.getElementById(previewId);
+  if (el) {
+    el.style.cursor = 'default';
+    el.onclick = null;
+    el.innerHTML = _imgUploadedHtml(previewId, nameId, url, file.name);
+  }
+  document.getElementById(nameId).value = file.name;
+}
+
+function removeImageCard(previewId, nameId) {
+  const el = document.getElementById(previewId);
+  if (el) {
+    el.style.cursor = 'pointer';
+    el.onclick = function() { document.getElementById('file-' + nameId).click(); };
+    el.innerHTML = `<svg width="32" height="32" fill="none" stroke="#6b6b80" stroke-width="1.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <div style="font-size:13px;margin-top:8px;color:#a0a0b8;">增加附件</div>
+      <div style="font-size:11px;color:#6b6b80;margin-top:3px;">限制 2MB</div>`;
+  }
+  const ni = document.getElementById(nameId);
+  if (ni) ni.value = '';
+}
+
+// ─── Image Link Modal ─────────────────────────────────────────────────────────
+let _currentImgLinkTarget = null;
+function openImageLinkModal(nameId) {
+  _currentImgLinkTarget = nameId;
+  const ni = document.getElementById(nameId);
+  const nameEl = document.getElementById('modal-img-name');
+  if (nameEl) nameEl.textContent = ni ? ni.value : '';
+  document.getElementById('image-link-modal').style.display = 'flex';
+}
+function closeImageLinkModal() {
+  document.getElementById('image-link-modal').style.display = 'none';
+  _currentImgLinkTarget = null;
+}
+function saveImageLink() {
+  closeImageLinkModal();
+}
+
+// ─── Toggle Editor Row ────────────────────────────────────────────────────────
+function toggleEditorRow(bodyId, headerEl) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  const chevronId = bodyId.replace('sched-body-', 'sched-chevron-');
+  const chevron = document.getElementById(chevronId);
+  if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+  state.formScheduleOpen = !isOpen;
+}
+
+// ─── Toggle Switch ────────────────────────────────────────────────────────────
+function toggleSwitch(isOn, onclickExpr) {
+  return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <div style="position:relative;width:38px;height:22px;background:${isOn ? '#ec4899' : '#2a2848'};border-radius:11px;cursor:pointer;transition:background .2s;" onclick="${onclickExpr}">
+      <div style="position:absolute;top:3px;left:${isOn ? '17px' : '3px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;"></div>
+    </div>
+    <span style="font-size:13px;color:#ccc;">${isOn ? '顯示' : '不顯示'}</span>
+  </label>`;
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+const _sbOpen = {};
+function renderSidebar() {
+  let html = '';
+  for (let gi = 0; gi < sidebarGroups.length; gi++) {
+    const g = sidebarGroups[gi];
+    // Determine open state; default from group.open or false
+    if (_sbOpen[gi] === undefined) _sbOpen[gi] = !!g.open;
+    const isExpanded = _sbOpen[gi];
+    const hasItems = g.items.length > 0;
+    html += `<div style="border-top:1px solid #1f1e38;">
+      <div onclick="toggleSbGroup(${gi})" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;font-size:12px;font-weight:600;color:${isExpanded ? '#c4b5fd' : '#a0a0b8'};letter-spacing:.03em;user-select:none;">
+        <span>${g.group}</span>
+        <span style="font-size:10px;transition:transform .2s;display:inline-block;transform:${isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};">▼</span>
+      </div>`;
+    if (isExpanded && hasItems) {
+      html += `<div>`;
+      for (const item of g.items) {
+        const isActive = item.section === 'ad' && ['banner','mid','news'].includes(state.section);
+        const click = item.section === 'ad' ? `goSection('banner')` : '';
+        html += `<div class="sidebar-item ${isActive ? 'active' : ''}" ${click ? `onclick="${click}"` : ''}
+          style="padding:8px 16px 8px ${isActive ? '13px' : '20px'};cursor:${click ? 'pointer' : 'default'};display:flex;align-items:center;gap:8px;font-size:13px;color:${isActive ? '#c4b5fd' : '#a0a0b8'};">
+          <span style="width:5px;height:5px;border-radius:50%;background:${isActive ? '#7c3aed' : '#3d3d5c'};flex-shrink:0;"></span>
+          ${item.label}
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  document.getElementById('sidebar-content').innerHTML = html;
+}
+
+function toggleSbGroup(gi) {
+  _sbOpen[gi] = !_sbOpen[gi];
+  renderSidebar();
+}
+
+let _sidebarCollapsed = false;
+function toggleSidebar() {
+  _sidebarCollapsed = !_sidebarCollapsed;
+  const sidebar = document.getElementById('sidebar');
+  const wrapper = document.getElementById('main-wrapper');
+  const footer = document.getElementById('edit-footer');
+  const logoText = document.getElementById('sidebar-logo-text');
+  const sbContent = document.getElementById('sidebar-content');
+  if (_sidebarCollapsed) {
+    sidebar.style.width = '56px';
+    wrapper.style.marginLeft = '56px';
+    footer.style.left = '56px';
+    logoText.style.display = 'none';
+    sbContent.style.display = 'none';
+  } else {
+    sidebar.style.width = '220px';
+    wrapper.style.marginLeft = '220px';
+    footer.style.left = '220px';
+    logoText.style.display = '';
+    sbContent.style.display = '';
+  }
+}
+
+// ─── Breadcrumb ───────────────────────────────────────────────────────────────
+function renderBreadcrumb() {
+  const sep = `<span style="margin:0 6px;color:#4b4b6b;">›</span>`;
+  const crumbStyle = 'color:#6b6b80;font-size:13px;';
+  const activeStyle = 'color:#a0a0b8;font-size:13px;';
+  let crumbs = `<span style="${crumbStyle}">首頁</span>${sep}<span style="${crumbStyle}">廣告管理</span>${sep}`;
+
+  if (state.section === 'banner' || state.section === 'mid') {
+    if (state.view === 'list') {
+      crumbs += `<span style="${activeStyle}">廣告版位</span>`;
+    } else if (state.section === 'banner') {
+      crumbs += `<span style="${crumbStyle};cursor:pointer;" onclick="backToList()">廣告版位</span>${sep}<span style="${activeStyle}">橫幅廣告 · 編輯</span>`;
+    } else {
+      crumbs += `<span style="${crumbStyle};cursor:pointer;" onclick="backToList()">廣告版位</span>${sep}<span style="${activeStyle}">中段廣告 · ${state.formMode === 'add' ? '新增' : '編輯'}</span>`;
+    }
+  } else if (state.section === 'news') {
+    if (state.view === 'list') {
+      crumbs += `<span style="${activeStyle}">廣告版位</span>`;
+    } else {
+      const subLabel = state.newsSubTab === 'inlay' ? '內嵌廣告' : state.newsSubTab === 'side-top' ? '側邊廣告（上方）' : '側邊廣告（下方）';
+      crumbs += `<span style="${crumbStyle};cursor:pointer;" onclick="backToList()">廣告版位</span>${sep}<span style="${activeStyle}">消息廣告 · ${state.formMode === 'add' ? '新增' : '編輯'}（${subLabel}）</span>`;
+    }
+  }
+  document.getElementById('breadcrumb').innerHTML = crumbs;
+}
+
+// ─── Page Title ───────────────────────────────────────────────────────────────
+function renderPageTitle() {
+  let title = '廣告版位';
+  if (state.section === 'banner' && state.view === 'form') {
+    title = '橫幅廣告 · 編輯';
+  } else if (state.section === 'mid' && state.view === 'form') {
+    title = `中段廣告 · ${state.formMode === 'add' ? '新增' : '編輯'}廣告`;
+  } else if (state.section === 'news' && state.view === 'form') {
+    const subLabel = state.newsSubTab === 'inlay' ? '內嵌廣告' : state.newsSubTab === 'side-top' ? '側邊廣告（上方）' : '側邊廣告（下方）';
+    title = `消息廣告 · ${state.formMode === 'add' ? '新增' : '編輯'}（${subLabel}）`;
+  }
+  document.getElementById('page-title').textContent = title;
+}
+
+// ─── Main Tabs ────────────────────────────────────────────────────────────────
+function renderMainTabs() {
+  const tab1Active = state.section === 'banner' || state.section === 'mid';
+  const tab2Active = state.section === 'news';
+  return `<div style="display:flex;gap:0;border-bottom:1px solid #2d2d4a;margin-bottom:0;">
+    <button class="tab-btn" onclick="goSection('banner')" style="padding:10px 24px;font-size:14px;font-weight:500;border:none;background:transparent;cursor:pointer;border-bottom:2px solid ${tab1Active ? '#7c3aed' : 'transparent'};color:${tab1Active ? '#c4b5fd' : '#6b6b80'};transition:color .15s,border-color .15s;margin-bottom:-1px;">橫幅廣告 &amp; 中段廣告</button>
+    <button class="tab-btn" onclick="goSection('news')" style="padding:10px 24px;font-size:14px;font-weight:500;border:none;background:transparent;cursor:pointer;border-bottom:2px solid ${tab2Active ? '#7c3aed' : 'transparent'};color:${tab2Active ? '#c4b5fd' : '#6b6b80'};transition:color .15s,border-color .15s;margin-bottom:-1px;">消息廣告</button>
+  </div>`;
+}
+
+// ─── Shared: order dropdown button ────────────────────────────────────────────
+function orderDropBtn(val) {
+  const opts = ['預設', ...Array.from({length:10},(_,i)=>i+1)];
+  return `<select style="background:#4c1d95;border:1px solid #6d28d9;color:#e9d5ff;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;cursor:pointer;min-width:64px;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%2210%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23e9d5ff%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 6px center;padding-right:22px;">
+    ${opts.map(o => `<option value="${o}" ${String(val) === String(o) || (o === '預設' && !val) ? 'selected' : ''}>${o === '預設' ? '預設' : o}</option>`).join('')}
+  </select>`;
+}
+
+// ─── Shared: 顯示 cell ─────────────────────────────────────────────────────────
+function visibleCell(isVisible) {
+  return isVisible
+    ? `<span style="color:#22c55e;font-size:13px;font-weight:500;">顯示</span>`
+    : `<span style="color:#f472b6;font-size:13px;font-weight:500;">不顯示</span>`;
+}
+
+// ─── Shared: 最後處理人員 cell ──────────────────────────────────────────────────
+function handlerCell(uid) {
+  if (!uid) return '<span style="color:#6b6b80;">—</span>';
+  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#a0a0b8;">
+    ${uid}
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  </span>`;
+}
+
+// ─── Shared: 操作 cell ─────────────────────────────────────────────────────────
+function actionCell(editFn) {
+  return `<div style="display:flex;align-items:center;gap:12px;">
+    <button onclick="${editFn}" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:#a0a0b8;padding:4px;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span style="font-size:10px;">編輯</span>
+    </button>
+    <button style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;color:#a0a0b8;padding:4px;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      <span style="font-size:10px;">資料軟刪</span>
+    </button>
+  </div>`;
+}
+
+// ─── Shared: ID th ─────────────────────────────────────────────────────────────
+function idTh() {
+  return `<th class="table-th">ID <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;"><polyline points="6 9 12 15 18 9"/></svg></th>`;
+}
+
+// ─── Banner + Mid Combined List ───────────────────────────────────────────────
+function renderBannerMidList() {
+  const ad = bannerAd;
+
+
+  return `<div style="margin-top:12px;">
+
+    <!-- ══ 橫幅廣告 ══ -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:15px;font-weight:600;color:#e0e0f0;">橫幅廣告</span>
+        <span style="font-size:12px;color:#6b6b80;">固定版位，1 個</span>
+      </div>
+    </div>
+
+    <div style="background:#1a1a2e;border:1px solid #2d2d4a;border-radius:10px;overflow:auto;margin-bottom:32px;">
+      <table style="width:100%;border-collapse:collapse;min-width:700px;">
+        <thead>
+          <tr>
+            ${idTh()}
+            <th class="table-th">圖片</th>
+            <th class="table-th">檔案名稱</th>
+            <th class="table-th">顯示</th>
+            <th class="table-th">建立時間</th>
+            <th class="table-th">最後處理時間</th>
+            <th class="table-th">最後處理人員</th>
+            <th class="table-th">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="table-td" style="color:#a0a0b8;font-size:13px;">${ad.id}</td>
+            <td class="table-td">
+              ${ad.imageName
+                ? `<div class="img-card"><img src="https://via.placeholder.com/80x50/252540/a0a0b8?text=${encodeURIComponent(ad.imageName.substring(0,6))}" alt=""></div>`
+                : `<div class="img-placeholder" style="font-size:11px;">無圖片</div>`}
+            </td>
+            <td class="table-td" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:#d0d0e8;">${ad.imageName || '<span style="color:#6b6b80;">—</span>'}</td>
+            <td class="table-td">${visibleCell(ad.isOpen)}</td>
+            <td class="table-td" style="font-size:12px;color:#a0a0b8;">${ad.createdAt}</td>
+            <td class="table-td" style="font-size:12px;color:#a0a0b8;">${ad.updatedAt}</td>
+            <td class="table-td">${handlerCell(ad.updatedBy)}</td>
+            <td class="table-td">${actionCell('openEditFormBanner()')}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══ 中段廣告 ══ -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:15px;font-weight:600;color:#e0e0f0;">中段廣告</span>
+        <span style="font-size:12px;color:#6b6b80;">輪播版位，最多 10 個</span>
+      </div>
+      <button onclick="openAddFormMid()" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);border:none;color:#fff;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500;">
+        ${iconPlus()} 新增廣告
+      </button>
+    </div>
+
+    <div style="background:#1a1a2e;border:1px solid #2d2d4a;border-radius:10px;overflow:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:860px;">
+        <thead>
+          <tr>
+            <th class="table-th">排序</th>
+            ${idTh()}
+            <th class="table-th">圖片</th>
+            <th class="table-th">檔案名稱</th>
+            <th class="table-th">顯示</th>
+            <th class="table-th">建立時間</th>
+            <th class="table-th">最後處理時間</th>
+            <th class="table-th">最後處理人員</th>
+            <th class="table-th">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${midAds.map(a => {
+            return `<tr>
+              <td class="table-td">${orderDropBtn(a.order)}</td>
+              <td class="table-td" style="color:#a0a0b8;font-size:13px;">${a.id}</td>
+              <td class="table-td">
+                ${a.imageName
+                  ? `<div class="img-card"><img src="https://via.placeholder.com/80x50/252540/a0a0b8?text=${encodeURIComponent(a.imageName.substring(0,5))}" alt=""></div>`
+                  : `<div class="img-placeholder" style="font-size:11px;">無圖片</div>`}
+              </td>
+              <td class="table-td" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:#d0d0e8;">${a.imageName || '<span style="color:#6b6b80;">—</span>'}</td>
+              <td class="table-td">${visibleCell(a.isVisible)}</td>
+              <td class="table-td" style="font-size:12px;color:#a0a0b8;">${a.createdAt || '—'}</td>
+              <td class="table-td" style="font-size:12px;color:#a0a0b8;">${a.updatedAt || '—'}</td>
+              <td class="table-td">${handlerCell(a.updatedBy)}</td>
+              <td class="table-td">${actionCell(`openEditFormMid(${a.id})`)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;">
+      ${(() => {
+        const total = midAds.length;
+        const visibleCount = midAds.filter(a => a.isVisible).length;
+        return `<span style="font-size:12px;color:#6b6b80;">總版位：<span style="color:#a0a0b8;">${total}</span></span>
+                <span style="font-size:12px;color:#6b6b80;">顯示中：<span style="color:#22c55e;">${visibleCount}</span></span>
+                <span style="font-size:12px;color:#6b6b80;">不顯示：<span style="color:#9ca3af;">${total - visibleCount}</span></span>`;
+      })()}
+    </div>
+  </div>`;
+}
+
+// ─── Banner Form ───────────────────────────────────────────────────────────────
+function renderBannerForm() {
+  const ad = bannerAd;
+  const promoLen = (ad.promoText || '').length;
+
+  return `
+  <div style="margin-top:8px;">
+    <div class="section-card">
+      ${renderLangTabs()}
+
+      <!-- 底圖 + 促銷文字 並排 -->
+      <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;">
+        <div style="flex-shrink:0;">
+          <label class="form-label">底圖 <span style="color:#7c3aed;">*</span></label>
+          ${renderImageUpload('banner-img-preview', 'banner-img-name', ad.imageName, '建議尺寸：1920×480px，JPG/PNG')}
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>促銷文字 <span style="color:#7c3aed;">*</span></span>
+            <span style="font-size:11px;color:${promoLen > 20 ? '#ef4444' : '#6b6b80'};">${promoLen} / 20</span>
+          </label>
+          <input type="text" class="form-input" value="${ad.promoText}" maxlength="20" placeholder="最多 20 字">
+        </div>
+      </div>
+
+      <!-- 排程 -->
+      ${renderScheduleComponent(ad, 'sched_banner')}
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:24px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:#6b6b80;">建立時間：<span style="color:#a0a0b8;">${ad.createdAt}</span></span>
+      <span style="font-size:12px;color:#6b6b80;">最後處理時間：<span style="color:#a0a0b8;">${ad.updatedAt}</span></span>
+      <span style="font-size:12px;color:#6b6b80;">最後處理人員：${handlerCell(ad.updatedBy)}</span>
+    </div>
+  </div>`;
+}
+
+// ─── Mid Form ─────────────────────────────────────────────────────────────────
+function renderMidForm() {
+  const ad = state.formMode === 'edit' ? midAds.find(a => a.id === state.editId) : null;
+  const promoLen = (ad?.promoText || '').length;
+
+  return `
+  <div style="margin-top:8px;">
+    <div class="section-card">
+      ${renderLangTabs()}
+
+      <!-- 底圖 + 促銷文字 並排 -->
+      <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;">
+        <div style="flex-shrink:0;">
+          <label class="form-label">底圖 <span style="color:#7c3aed;">*</span></label>
+          ${renderImageUpload('mid-img-preview', 'mid-img-name', ad?.imageName || '', '建議尺寸：1200×400px，JPG/PNG')}
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>促銷文字 <span style="color:#7c3aed;">*</span></span>
+            <span style="font-size:11px;color:${promoLen > 20 ? '#ef4444' : '#6b6b80'};">${promoLen} / 20</span>
+          </label>
+          <input type="text" class="form-input" value="${ad?.promoText || ''}" maxlength="20" placeholder="最多 20 字">
+        </div>
+      </div>
+
+      <!-- 排程 -->
+      ${renderScheduleComponent(ad || null, 'sched_mid')}
+    </div>
+
+    ${ad ? `<div style="margin-top:12px;display:flex;gap:24px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:#6b6b80;">建立時間：<span style="color:#a0a0b8;">${ad.createdAt}</span></span>
+      <span style="font-size:12px;color:#6b6b80;">最後處理時間：<span style="color:#a0a0b8;">${ad.updatedAt}</span></span>
+      <span style="font-size:12px;color:#6b6b80;">最後處理人員：${handlerCell(ad.updatedBy)}</span>
+    </div>` : ''}
+  </div>`;
+}
+
+// ─── News Sub Tabs ────────────────────────────────────────────────────────────
+function renderNewsSubTabs() {
+  const tabs = [
+    { key: 'inlay',    label: '內嵌廣告',       desc: 'Cookie 20 秒換頁，依序輪替' },
+    { key: 'side-top', label: '側邊廣告（上方）', desc: '每 4 秒切換一張，依排序循環' },
+    { key: 'side-bot', label: '側邊廣告（下方）', desc: '每 5 秒切換一張，依排序循環' },
+  ];
+  const activeTab = tabs.find(t => t.key === state.newsSubTab);
+  return `
+  <div style="margin-bottom:16px;">
+    <div style="display:flex;gap:6px;border-bottom:1px solid #2d2d4a;margin-bottom:12px;">
+      ${tabs.map(t => {
+        const active = state.newsSubTab === t.key;
+        return `<button class="tab-btn" onclick="state.newsSubTab='${t.key}';render();" style="padding:8px 16px;font-size:13px;border:none;background:transparent;cursor:pointer;border-bottom:2px solid ${active ? '#7c3aed' : 'transparent'};color:${active ? '#c4b5fd' : '#6b6b80'};margin-bottom:-1px;white-space:nowrap;">${t.label}</button>`;
+      }).join('')}
+    </div>
+    ${activeTab ? `<div style="font-size:12px;color:#6b6b80;display:flex;align-items:center;gap:6px;">
+      <svg width="12" height="12" fill="none" stroke="#6b6b80" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      ${activeTab.desc}
+    </div>` : ''}
+  </div>`;
+}
+
+// ─── News List ────────────────────────────────────────────────────────────────
+function renderNewsList() {
+  const ads = state.newsSubTab === 'inlay' ? inlayAds
+    : state.newsSubTab === 'side-top' ? sideTopAds : sideBotAds;
+
+  const rows = ads.map(ad => `<tr>
+    <td class="table-td">${orderDropBtn(ad.order)}</td>
+    <td class="table-td" style="color:#a0a0b8;font-size:13px;">${ad.id}</td>
+    <td class="table-td">
+      ${ad.imageName
+        ? `<div class="img-card"><img src="https://via.placeholder.com/80x50/252540/a0a0b8?text=${encodeURIComponent(ad.imageName.substring(0,6))}" alt=""></div>`
+        : `<div class="img-placeholder" style="font-size:11px;">無圖片</div>`}
+    </td>
+    <td class="table-td" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:#d0d0e8;">${ad.imageName || '<span style="color:#6b6b80;">—</span>'}</td>
+    <td class="table-td">${visibleCell(ad.isVisible)}</td>
+    <td class="table-td" style="font-size:12px;color:#a0a0b8;">${ad.createdAt || '—'}</td>
+    <td class="table-td" style="font-size:12px;color:#a0a0b8;">${ad.updatedAt || '—'}</td>
+    <td class="table-td">${handlerCell(ad.updatedBy)}</td>
+    <td class="table-td">${actionCell(`openEditFormNews(${ad.id})`)}</td>
+  </tr>`).join('');
+
+  return `
+  <div style="margin-top:8px;">
+    ${renderNewsSubTabs()}
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button onclick="openAddFormNews()" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);border:none;color:#fff;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500;">
+        ${iconPlus()} 新增廣告
+      </button>
+    </div>
+
+    <div style="background:#1a1a2e;border:1px solid #2d2d4a;border-radius:10px;overflow:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:760px;">
+        <thead>
+          <tr>
+            <th class="table-th">排序</th>
+            ${idTh()}
+            <th class="table-th">圖片</th>
+            <th class="table-th">檔案名稱</th>
+            <th class="table-th">顯示</th>
+            <th class="table-th">建立時間</th>
+            <th class="table-th">最後處理時間</th>
+            <th class="table-th">最後處理人員</th>
+            <th class="table-th">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="9" style="text-align:center;padding:32px;color:#6b6b80;font-size:13px;">尚無廣告資料</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ─── News Form ────────────────────────────────────────────────────────────────
+function renderNewsForm() {
+  const ads = state.newsSubTab === 'inlay' ? inlayAds
+    : state.newsSubTab === 'side-top' ? sideTopAds : sideBotAds;
+  const ad = state.formMode === 'edit' ? ads.find(a => a.id === state.editId) : null;
+  const subLabel = state.newsSubTab === 'inlay' ? '內嵌廣告' : state.newsSubTab === 'side-top' ? '側邊廣告（上方）' : '側邊廣告（下方）';
+  const imgHint = state.newsSubTab === 'inlay' ? '內嵌廣告：橫版圖片，建議 800×300px' : '側邊廣告：直版圖片，建議 300×600px';
+  const maxOrder = ads.length + (state.formMode === 'add' ? 1 : 0);
+
+  return `
+  <div style="margin-top:8px;">
+    <!-- Sub type tag -->
+    <div style="margin-bottom:12px;">
+      <span style="font-size:12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#c4b5fd;padding:3px 10px;border-radius:9999px;">${subLabel}</span>
+    </div>
+
+    <div class="section-card">
+      ${renderLangTabs()}
+
+      <!-- 底圖 -->
+      <div style="margin-bottom:20px;">
+        <label class="form-label">底圖 <span style="color:#7c3aed;">*</span></label>
+        ${renderImageUpload('news-img-preview', 'news-img-name', ad?.imageName || '', imgHint)}
+      </div>
+
+      <!-- 排程 -->
+      ${renderScheduleComponent(ad || null, 'sched_news')}
+    </div>
+
+    ${ad ? `<div style="margin-top:12px;display:flex;gap:24px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:#6b6b80;">建立時間：<span style="color:#a0a0b8;">${ad.createdAt}</span></span>
+      <span style="font-size:12px;color:#6b6b80;">最後處理時間：<span style="color:#a0a0b8;">${ad.updatedAt}</span></span>
+      <span style="font-size:12px;color:#6b6b80;">最後處理人員：${handlerCell(ad.updatedBy)}</span>
+    </div>` : ''}
+  </div>`;
+}
+
+// ─── Action Functions ─────────────────────────────────────────────────────────
+function goSection(sec) {
+  state.section = sec;
+  state.view = 'list';
+  state.langTab = 'zh-TW';
+  render();
+}
+
+function openEditFormBanner() {
+  state.section = 'banner';
+  state.view = 'form';
+  state.formScheduleOpen = bannerAd.isOpen;
+  state.langTab = 'zh-TW';
+  render();
+}
+
+function openAddFormMid() {
+  state.section = 'mid';
+  state.view = 'form';
+  state.formMode = 'add';
+  state.editId = null;
+  state.formScheduleOpen = false;
+  state.langTab = 'zh-TW';
+  render();
+}
+
+function openAddFormNews() {
+  state.section = 'news';
+  state.view = 'form';
+  state.formMode = 'add';
+  state.editId = null;
+  state.formScheduleOpen = false;
+  state.langTab = 'zh-TW';
+  render();
+}
+
+function openEditFormMid(id) {
+  const ad = midAds.find(a => a.id === id);
+  state.section = 'mid';
+  state.view = 'form';
+  state.formMode = 'edit';
+  state.editId = id;
+  state.formScheduleOpen = ad ? ad.isOpen : true;
+  state.langTab = 'zh-TW';
+  render();
+}
+
+function openEditFormNews(id) {
+  const ads = state.newsSubTab === 'inlay' ? inlayAds
+    : state.newsSubTab === 'side-top' ? sideTopAds : sideBotAds;
+  const ad = ads.find(a => a.id === id);
+  state.view = 'form';
+  state.formMode = 'edit';
+  state.editId = id;
+  state.formScheduleOpen = ad ? ad.isOpen : true;
+  state.langTab = 'zh-TW';
+  render();
+}
+
+function backToList() {
+  state.view = 'list';
+  render();
+}
+
+// ─── Main Render ──────────────────────────────────────────────────────────────
+function renderPageActions() {
+  const el = document.getElementById('page-actions');
+  if (!el) return;
+  if (state.view !== 'list') { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button onclick="alert('清除快取')" style="background:#252540;border:1px solid #3d3d5c;color:#a0a0b8;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.85"/></svg>
+      清除快取
+    </button>
+    <button onclick="render()" style="background:#252540;border:1px solid #3d3d5c;color:#a0a0b8;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      刷新
+    </button>`;
+}
+
+function render() {
+  renderSidebar();
+  renderBreadcrumb();
+  renderPageTitle();
+  renderPageActions();
+
+  const mainTabs = renderMainTabs();
+
+  let sectionContent = '';
+  if (state.section === 'banner' || state.section === 'mid') {
+    if (state.view === 'list') {
+      sectionContent = renderBannerMidList();
+    } else if (state.section === 'banner') {
+      sectionContent = renderBannerForm();
+    } else {
+      sectionContent = renderMidForm();
+    }
+  } else if (state.section === 'news') {
+    sectionContent = state.view === 'list' ? renderNewsList() : renderNewsForm();
+  }
+
+  document.getElementById('content').innerHTML = mainTabs + sectionContent;
+
+  // Footer: show only when in form view
+  const inForm = state.view === 'form';
+  const footer = document.getElementById('edit-footer');
+  footer.style.display = inForm ? 'flex' : 'none';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>

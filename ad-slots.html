@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>廣告版位 - 廣告管理</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+      background: #0e0d1b; color: #e0e0e0;
+      display: flex; min-height: 100vh; font-size: 14px;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 200px; min-width: 200px; background: #13122a;
+      display: flex; flex-direction: column;
+      border-right: 1px solid #1f1e38;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      overflow-y: auto; z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 16px 16px 8px; font-size: 22px; font-weight: 900;
+      background: linear-gradient(90deg,#f472b6,#a855f7);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+    .sidebar-user { padding: 0 16px 12px; font-size: 11px; color: #888; }
+    .nav-group { border-top: 1px solid #1f1e38; }
+    .nav-group-label {
+      padding: 10px 16px 6px; font-size: 13px; color: #ccc;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none;
+    }
+    .nav-group-label:hover { color: #fff; }
+    .nav-group-label .arrow { font-size: 10px; transition: transform .2s; }
+    .nav-group-label.open .arrow { transform: rotate(180deg); }
+    .nav-items { display: flex; flex-direction: column; }
+    .nav-item {
+      padding: 8px 16px 8px 24px; font-size: 13px; color: #bbb;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .nav-item:hover { background: #1c1b35; color: #fff; }
+    .nav-item.active { background: #ec4899; color: #fff; }
+    .sidebar-version {
+      margin-top: auto; padding: 12px 16px;
+      font-size: 11px; color: #555; line-height: 1.6;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      position: fixed; top: 0; left: 200px; right: 0; height: 50px;
+      background: #13122a; border-bottom: 1px solid #1f1e38;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 0 20px; gap: 18px; z-index: 99;
+    }
+    .topbar-icon { width: 22px; height: 22px; color: #aaa; cursor: pointer; transition: color .15s; }
+    .topbar-icon:hover { color: #fff; }
+
+    /* ── Main ── */
+    .main { margin-left: 200px; padding-top: 50px; flex: 1; display: flex; flex-direction: column; }
+    .page { padding: 24px; flex: 1; }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #888; margin-bottom: 12px;
+    }
+    .breadcrumb .sep { color: #555; }
+    .breadcrumb .current { color: #ec4899; }
+    .breadcrumb span[data-nav] { cursor: pointer; }
+    .breadcrumb span[data-nav]:hover { color: #ec4899; }
+
+    /* ── Page Header ── */
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .page-title { font-size: 22px; font-weight: 700; color: #fff; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 6px;
+      font-size: 13px; font-weight: 600; border: none;
+      transition: filter .15s;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn-primary { background: #ec4899; color: #fff; }
+    .btn-purple  { background: #7c3aed; color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid #7c3aed; color: #a78bfa; }
+    .btn-ghost   { background: transparent; border: 1px solid #2a2848; color: #888; }
+    .btn-sm      { padding: 5px 12px; font-size: 12px; }
+    .btn-group   { display: flex; gap: 8px; }
+
+    /* ── Card ── */
+    .card {
+      background: #1a1930; border: 1px solid #2a2848;
+      border-radius: 10px; padding: 20px; margin-bottom: 18px;
+    }
+    .card-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+    .card-no-pad { padding: 0; overflow: hidden; }
+
+    /* ── Main Tabs (橫幅+中段 / 消息) ── */
+    .main-tabs { display: flex; gap: 0; margin-bottom: 24px; }
+    .main-tab {
+      padding: 11px 28px; font-size: 14px; font-weight: 600;
+      background: #1a1930; color: #888;
+      border: 1px solid #2a2848; border-bottom: none;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .main-tab:first-child { border-radius: 8px 0 0 0; }
+    .main-tab:last-child  { border-radius: 0 8px 0 0; }
+    .main-tab.active { background: #2d2b52; color: #fff; border-color: #7c3aed; }
+    .main-tab-body {
+      background: #2d2b52; border: 1px solid #7c3aed;
+      border-radius: 0 8px 8px 8px; padding: 20px; margin-bottom: 20px;
+    }
+    .main-tab-body.second { border-radius: 8px; }
+
+    /* ── Sub Tabs ── */
+    .sub-tabs { display: flex; gap: 0; margin-bottom: 20px; }
+    .sub-tab {
+      padding: 9px 20px; font-size: 13px; font-weight: 600;
+      background: #1f1d38; color: #aaa;
+      border: 1px solid #2a2848;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .sub-tab:first-child { border-radius: 6px 0 0 6px; }
+    .sub-tab:last-child  { border-radius: 0 6px 6px 0; }
+    .sub-tab.active { background: #ec4899; color: #fff; border-color: #ec4899; }
+    .sub-tab:hover:not(.active) { background: #2d2b52; color: #fff; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #1f1d38; }
+    thead th {
+      padding: 10px 14px; text-align: left; color: #bbb;
+      font-weight: 600; white-space: nowrap; border-bottom: 1px solid #2a2848;
+    }
+    tbody tr { border-bottom: 1px solid #1f1e38; transition: background .12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #1c1b35; }
+    tbody td { padding: 10px 14px; vertical-align: middle; color: #ccc; }
+    .td-thumb img {
+      width: 80px; height: 45px; object-fit: cover;
+      border-radius: 5px; border: 1px solid #2a2848; display: block;
+    }
+    .td-thumb-side img {
+      width: 45px; height: 70px; object-fit: cover;
+      border-radius: 5px; border: 1px solid #2a2848; display: block;
+    }
+
+    /* ── Badges ── */
+    .badge-on  { color: #4ade80; font-size: 12px; font-weight: 600; }
+    .badge-off { color: #888;    font-size: 12px; font-weight: 600; }
+    .badge-active   { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; background:rgba(74,222,128,.12); color:#4ade80; border:1px solid rgba(74,222,128,.25); }
+    .badge-upcoming { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; background:rgba(96,165,250,.12); color:#60a5fa; border:1px solid rgba(96,165,250,.25); }
+    .badge-expired  { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; background:rgba(239,68,68,.12);  color:#f87171; border:1px solid rgba(239,68,68,.25); }
+    .badge-draft    { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; background:rgba(136,136,136,.1); color:#888;   border:1px solid rgba(136,136,136,.2); }
+
+    /* ── Order ── */
+    .order-num {
+      background: #7c3aed; color: #fff; border-radius: 5px;
+      padding: 3px 10px; font-size: 13px; font-weight: 700;
+      display: inline-block; min-width: 28px; text-align: center;
+    }
+
+    /* ── Action ── */
+    .action-cell { display: flex; gap: 12px; align-items: center; white-space: nowrap; }
+    .action-link   { color: #a78bfa; font-size: 12px; cursor: pointer; }
+    .action-link:hover { color: #ec4899; }
+    .action-delete { color: #ef4444; font-size: 12px; cursor: pointer; }
+    .action-delete:hover { color: #fca5a5; }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; font-size: 12px; color: #888;
+      border-top: 1px solid #1f1e38; flex-wrap: wrap; gap: 8px;
+    }
+    .pagination-nav { display: flex; gap: 5px; }
+    .pagination-nav button {
+      padding: 4px 10px; background: #1f1d38; border: 1px solid #2a2848;
+      border-radius: 4px; color: #ccc; font-size: 12px;
+    }
+    .pagination-nav button:hover { background: #2d2b52; }
+
+    /* ── Form Controls ── */
+    .input, .select {
+      background: #0e0d1b; border: 1px solid #2a2848; border-radius: 6px;
+      color: #e0e0e0; padding: 7px 12px; font-size: 13px; outline: none;
+      transition: border-color .15s; font-family: inherit;
+    }
+    .input:focus, .select:focus { border-color: #7c3aed; }
+    .input-with-counter { position: relative; }
+    .input-with-counter .input { padding-right: 56px; width: 100%; }
+    .input-with-counter .counter {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 11px; color: #555; pointer-events: none;
+    }
+
+    /* ── Form Row ── */
+    .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+    .form-label { font-size: 12px; color: #aaa; font-weight: 600; }
+    .form-hint  { font-size: 11px; color: #555; }
+    .required   { color: #ef4444; }
+
+    /* ── Image Upload ── */
+    .image-upload-wrap { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .image-slot {
+      position: relative; border-radius: 8px; overflow: hidden;
+      border: 1px solid #2a2848; background: #0e0d1b;
+    }
+    .image-slot img { display: block; object-fit: cover; }
+    .image-slot .overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: flex-start; justify-content: flex-end; padding: 4px;
+    }
+    .btn-del-img {
+      width: 24px; height: 24px; border-radius: 50%; border: none;
+      background: rgba(220,38,38,.8); color: #fff; font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .image-add {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px;
+      border: 2px dashed #2a2848; border-radius: 8px;
+      color: #555; font-size: 22px; cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .image-add span.label { font-size: 11px; }
+    .image-add:hover { border-color: #7c3aed; color: #7c3aed; }
+    .image-spec { font-size: 11px; color: #555; margin-top: 6px; line-height: 1.7; }
+
+    /* ── Lang Tabs ── */
+    .lang-tabs { display: flex; margin-bottom: 20px; }
+    .lang-tab {
+      flex: 1; padding: 10px; text-align: center;
+      font-size: 13px; font-weight: 600;
+      background: #2d2b52; color: #bbb; border: none; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .lang-tab:first-child { border-radius: 8px 0 0 8px; }
+    .lang-tab:last-child  { border-radius: 0 8px 8px 0; }
+    .lang-tab.active { background: #ec4899; color: #fff; }
+    .lang-tab:hover:not(.active) { background: #3a3770; color: #fff; }
+
+    /* ── Schedule ── */
+    .schedule-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .schedule-badge-active   { display:inline-block; padding:3px 12px; border-radius:5px; font-size:12px; font-weight:600; background:#166534; color:#4ade80; }
+    .schedule-badge-upcoming { display:inline-block; padding:3px 12px; border-radius:5px; font-size:12px; font-weight:600; background:rgba(96,165,250,.15); color:#60a5fa; border:1px solid rgba(96,165,250,.3); }
+    .schedule-badge-expired  { display:inline-block; padding:3px 12px; border-radius:5px; font-size:12px; font-weight:600; background:#ef4444; color:#fff; }
+    .schedule-badge-draft    { display:inline-block; padding:3px 12px; border-radius:5px; font-size:12px; font-weight:600; background:#1f1d38; color:#888; border:1px solid #2a2848; }
+    .schedule-hint-text { text-align:right; font-size:11px; margin-top:-8px; margin-bottom:12px; }
+    .schedule-meta { font-size:12px; color:#666; margin-bottom:14px; }
+    .schedule-options { display:flex; flex-direction:column; gap:14px; }
+    .schedule-option { display:flex; align-items:center; gap:10px; }
+    .schedule-option label { font-size:13px; color:#ccc; cursor:pointer; }
+    .radio-c { width:16px; height:16px; accent-color:#ec4899; cursor:pointer; }
+    .schedule-times { display:flex; gap:16px; flex-wrap:wrap; margin-left:26px; margin-top:8px; }
+    .schedule-time-field { display:flex; flex-direction:column; gap:4px; }
+    .schedule-time-label { font-size:11px; color:#888; }
+    .schedule-time-value {
+      background:#0e0d1b; border:1px solid #2a2848; border-radius:6px;
+      padding:6px 12px; font-size:13px; color:#ccc; outline:none;
+    }
+    .schedule-time-value:focus { border-color:#7c3aed; }
+    .schedule-sub-hint { font-size:11px; color:#555; margin-left:26px; margin-top:6px; }
+
+    /* ── Edit Footer ── */
+    .edit-footer {
+      display: flex; gap: 10px; padding: 16px 24px;
+      border-top: 1px solid #1f1e38; background: #0e0d1b;
+      position: sticky; bottom: 0;
+    }
+
+    /* ── Edit title ── */
+    .edit-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .edit-sub { font-size: 12px; color: #666; margin-bottom: 20px; }
+    .edit-sub .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; margin-right: 6px;
+    }
+    .tag-purple { background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; }
+    .tag-gray   { background: #0e0d1b;    color: #666;    border: 1px solid #2a2848; }
+
+    /* ── Section divider ── */
+    .divider { height: 1px; background: #1f1e38; margin: 18px 0; }
+
+    /* ── Info box ── */
+    .info-box {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: #0e0d1b; border: 1px solid #2a2848; border-radius: 6px;
+      padding: 10px 14px; margin-bottom: 18px; font-size: 12px; color: #888;
+    }
+
+    /* ── Table footer ── */
+    .table-footer-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-top: 1px solid #1f1e38;
+      font-size: 12px; color: #666;
+    }
+    .table-footer-bar strong { color: #a78bfa; }
+
+    /* ── Warning ── */
+    .warning-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(251,146,60,.08); border: 1px solid rgba(251,146,60,.2);
+      border-radius: 6px; padding: 8px 14px; margin-bottom: 14px;
+      font-size: 12px; color: #fb923c;
+    }
+
+    /* ── Toggle switch (前台顯示) ── */
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+    .toggle {
+      position: relative; width: 36px; height: 20px;
+      background: #2a2848; border-radius: 20px; cursor: pointer;
+      transition: background .2s; flex-shrink: 0;
+    }
+    .toggle.on { background: #ec4899; }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      transition: transform .2s;
+    }
+    .toggle.on::after { transform: translateX(16px); }
+    .toggle-label { font-size: 13px; color: #ccc; }
+
+    /* hide utility */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Pkdyhorny</div>
+  <div class="sidebar-user">User ID: 1000007</div>
+  <div class="nav-group"><div class="nav-group-label">遊戲資料 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">前台首頁 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">客服中心 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">會員中心 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">金流相關 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">代理中心 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">常用工具 <span class="arrow">▼</span></div></div>
+  <div class="nav-group">
+    <div class="nav-group-label open">廣告管理 <span class="arrow">▼</span></div>
+    <div class="nav-items">
+      <div class="nav-item active" onclick="goMain()">廣告版位</div>
+    </div>
+  </div>
+  <div class="nav-group"><div class="nav-group-label">信件中心 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">兌換碼管理 <span class="arrow">▼</span></div></div>
+  <div class="nav-group"><div class="nav-group-label">成員與權限 <span class="arrow">▼</span></div></div>
+  <div class="sidebar-version">版本號: v4.1.9<br>發布時間: 2026-02-24T15:21:17<br>環境: prod</div>
+</aside>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+  <svg class="topbar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A9 9 0 1118.88 6.196M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+<!-- ════════════════════════════════════
+     主頁面（廣告版位列表/設定）
+════════════════════════════════════ -->
+<div id="view-main" class="page">
+  <div class="breadcrumb">
+    <span>🏠 首頁</span><span class="sep">›</span>
+    <span>廣告管理</span><span class="sep">›</span>
+    <span class="current">廣告版位</span>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">廣告版位</h1>
+    <div class="btn-group">
+      <button class="btn btn-purple">清除快取</button>
+      <button class="btn btn-purple">刷新</button>
+    </div>
+  </div>
+
+  <!-- 主 Tab -->
+  <div class="main-tabs">
+    <div class="main-tab active" id="mtab-1" onclick="switchMainTab(1)">橫幅廣告 &amp; 中段廣告</div>
+    <div class="main-tab"        id="mtab-2" onclick="switchMainTab(2)">消息廣告</div>
+  </div>
+
+  <!-- ── 主 Tab 1：橫幅廣告 + 中段廣告 ── -->
+  <div id="mtab-body-1" class="main-tab-body">
+    <div class="sub-tabs">
+      <div class="sub-tab active" id="stab-banner" onclick="switchSubTab('banner')">橫幅廣告</div>
+      <div class="sub-tab"        id="stab-mid"    onclick="switchSubTab('mid')">中段廣告</div>
+    </div>
+
+    <!-- 子 Tab：橫幅廣告（直接顯示設定） -->
+    <div id="sub-banner">
+      <div class="info-box">
+        <span>ℹ️</span>
+        <span>橫幅廣告為固定版位，直接在此編輯素材與排程設定。</span>
+      </div>
+
+      <!-- 多語系 -->
+      <div class="lang-tabs">
+        <button class="lang-tab">英文</button>
+        <button class="lang-tab active">繁體中文</button>
+        <button class="lang-tab">日文</button>
+        <button class="lang-tab">韓文</button>
+        <button class="lang-tab">簡體中文</button>
+      </div>
+
+      <!-- 廣告素材 -->
+      <div class="card">
+        <div class="card-title">廣告素材</div>
+        <div class="form-row">
+          <div class="form-label">底圖 <span class="required">*</span></div>
+          <div class="image-upload-wrap">
+            <div class="image-slot">
+              <img src="https://via.placeholder.com/240x100/1a1930/f472b6?text=Banner+Image" width="240" height="100" />
+              <div class="overlay"><button class="btn-del-img">🗑</button></div>
+            </div>
+            <div>
+              <div class="image-add" style="width:120px;height:100px;">
+                <span>＋</span><span class="label">上傳</span>
+              </div>
+              <div class="image-spec">建議尺寸：1200 × 500 px<br>格式：JPG / PNG / GIF<br>上限：2 MB</div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="form-row">
+          <div class="form-label">促銷文字 <span class="required">*</span></div>
+          <div class="input-with-counter">
+            <input class="input" type="text" value="春季改版上線！新地圖大公開" />
+            <span class="counter">14 / 20</span>
+          </div>
+          <div class="form-hint">上限 20 字</div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">按鈕文字 <span class="required">*</span></div>
+          <div class="input-with-counter">
+            <input class="input" type="text" value="立即前往" style="width:200px;" />
+            <span class="counter" style="right: calc(100% - 164px);">4 / 5</span>
+          </div>
+          <div class="form-hint">上限 5 字</div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">跳轉 URL</div>
+          <input class="input" type="text" value="/game/spring-update" style="width:100%;" />
+          <div class="form-hint">留空則點擊無動作</div>
+        </div>
+      </div>
+
+      <!-- 前台顯示 + 排程 -->
+      <div class="card">
+        <div class="schedule-header">
+          <div class="card-title" style="margin-bottom:0;">開放排程設定</div>
+          <span class="schedule-badge-active">進行中</span>
+        </div>
+        <div class="schedule-hint-text" style="color:#4ade80;">當前時間在排程範圍內，正在進行中</div>
+        <div class="schedule-meta"><span style="color:#aaa;">建立時間</span><br>2026/03/01 09:00:00</div>
+        <div class="schedule-options">
+          <div class="schedule-option">
+            <input type="radio" name="banner-pub" id="b-draft" class="radio-c" />
+            <label for="b-draft">不開放（存成草稿）</label>
+          </div>
+          <div>
+            <div class="schedule-option">
+              <input type="radio" name="banner-pub" id="b-open" class="radio-c" checked />
+              <label for="b-open">開放</label>
+            </div>
+            <div class="schedule-times">
+              <div class="schedule-time-field">
+                <span class="schedule-time-label">上架時間</span>
+                <input class="schedule-time-value" type="datetime-local" value="2026-03-01T00:00" />
+              </div>
+              <div class="schedule-time-field">
+                <span class="schedule-time-label">下架時間</span>
+                <input class="schedule-time-value" type="datetime-local" value="2026-03-31T23:59" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;padding-bottom:8px;">
+        <button class="btn btn-primary">儲存</button>
+        <button class="btn btn-ghost">重置</button>
+      </div>
+    </div><!-- /sub-banner -->
+
+    <!-- 子 Tab：中段廣告（列表） -->
+    <div id="sub-mid" class="hidden">
+      <div class="page-header" style="margin-bottom:14px;">
+        <div style="font-size:13px;color:#888;">共 9 個版位，依排序輪播顯示</div>
+        <button class="btn btn-purple btn-sm" onclick="goEdit('mid','新增')">＋ 新增廣告</button>
+      </div>
+      <div class="warning-bar">⚠️ 目前有效廣告（顯示中）共 6 筆，輪播序列：1 → 2 → 3 → 5 → 6 → 8（排序 4、7、9 不顯示或已過期）</div>
+      <div class="card card-no-pad">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>排序</th><th>底圖</th><th>促銷文字</th><th>前台顯示</th>
+                <th>排程狀態</th><th>上架時間</th><th>下架時間</th>
+                <th>建立時間</th><th>最後處理</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="order-num">1</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/f472b6?text=G1" /></td>
+                <td>全新角色登場！限時好禮等你拿</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/03/31 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">2</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/a78bfa?text=G2" /></td>
+                <td>春季改版上線 新地圖大公開</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/03/31 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">3</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/4ade80?text=G3" /></td>
+                <td>排行榜賽季結算 TOP獎勵豐富</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/03/31 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr style="opacity:.5;">
+                <td><span class="order-num" style="background:#2a2848;color:#555;">4</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/555?text=G4" /></td>
+                <td style="color:#555;">四月慶典活動 花季限定皮膚</td>
+                <td><span class="badge-off">不顯示</span></td>
+                <td><span class="badge-draft">草稿</span></td>
+                <td style="font-size:12px;color:#555;">—</td>
+                <td style="font-size:12px;color:#555;">—</td>
+                <td style="font-size:12px;">2026/03/10</td>
+                <td style="font-size:12px;">1000007</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">5</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/fb923c?text=G5" /></td>
+                <td>魔王副本挑戰開放 組隊迎戰</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/04/15 23:59</td>
+                <td style="font-size:12px;">2026/03/01</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">6</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/60a5fa?text=G6" /></td>
+                <td>新職業上線 搶先體驗無限可能</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/05 00:00</td>
+                <td style="font-size:12px;">2026/04/05 23:59</td>
+                <td style="font-size:12px;">2026/03/04</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr style="opacity:.5;">
+                <td><span class="order-num" style="background:#2a2848;color:#555;">7</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/555?text=G7" /></td>
+                <td style="color:#555;">限時聯名活動 獨家角色皮膚</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-expired">已過期</span></td>
+                <td style="font-size:12px;">2026/01/01 00:00</td>
+                <td style="font-size:12px;color:#f87171;">2026/02/28 23:59</td>
+                <td style="font-size:12px;">2026/01/01</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">8</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/a78bfa?text=G8" /></td>
+                <td>週年慶活動開跑 豐富獎勵等你</td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-upcoming">即將開放</span></td>
+                <td style="font-size:12px;">2026/04/01 00:00</td>
+                <td style="font-size:12px;">2026/04/30 23:59</td>
+                <td style="font-size:12px;">2026/03/15</td>
+                <td style="font-size:12px;">1000007</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr style="opacity:.5;">
+                <td><span class="order-num" style="background:#2a2848;color:#555;">9</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/555?text=G9" /></td>
+                <td style="color:#555;">（尚未設定）</td>
+                <td><span class="badge-off">不顯示</span></td>
+                <td><span class="badge-draft">草稿</span></td>
+                <td style="font-size:12px;color:#555;">—</td>
+                <td style="font-size:12px;color:#555;">—</td>
+                <td style="font-size:12px;">—</td>
+                <td style="font-size:12px;">—</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('mid','新增')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer-bar">
+          <span>總版位：<strong>9</strong>&ensp;|&ensp;有效輪播中：<strong>6</strong>&ensp;|&ensp;草稿/不顯示/已過期：3</span>
+        </div>
+      </div>
+    </div><!-- /sub-mid -->
+  </div><!-- /mtab-body-1 -->
+
+  <!-- ── 主 Tab 2：消息廣告 ── -->
+  <div id="mtab-body-2" class="main-tab-body second hidden">
+    <div class="sub-tabs">
+      <div class="sub-tab active" id="stab-inlay"    onclick="switchNewsTab('inlay')">內嵌廣告</div>
+      <div class="sub-tab"        id="stab-side-top" onclick="switchNewsTab('side-top')">側邊廣告（上方）</div>
+      <div class="sub-tab"        id="stab-side-bot" onclick="switchNewsTab('side-bot')">側邊廣告（下方）</div>
+    </div>
+
+    <!-- 內嵌廣告 -->
+    <div id="news-inlay">
+      <div class="page-header" style="margin-bottom:14px;">
+        <div style="font-size:13px;color:#888;">Cookie 20 秒換頁，依序輪替</div>
+        <button class="btn btn-purple btn-sm" onclick="goEdit('news-inlay','新增')">＋ 新增廣告</button>
+      </div>
+      <div class="card card-no-pad">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>排序</th><th>底圖</th><th>前台顯示</th><th>排程狀態</th><th>上架時間</th><th>下架時間</th><th>建立時間</th><th>最後處理</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="order-num">1</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/4ade80?text=N1" /></td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/03/31 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('news-inlay','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">2</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/f472b6?text=N2" /></td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/04/15 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('news-inlay','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr style="opacity:.5;">
+                <td><span class="order-num" style="background:#2a2848;color:#555;">3</span></td>
+                <td class="td-thumb"><img src="https://via.placeholder.com/80x45/1a1930/555?text=N3" /></td>
+                <td><span class="badge-off">不顯示</span></td>
+                <td><span class="badge-draft">草稿</span></td>
+                <td style="font-size:12px;color:#555;">—</td>
+                <td style="font-size:12px;color:#555;">—</td>
+                <td style="font-size:12px;">2026/03/10</td>
+                <td style="font-size:12px;">1000007</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('news-inlay','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer-bar">總筆數：<strong>3</strong>&ensp;|&ensp;有效輪替中：<strong>2</strong></div>
+      </div>
+    </div>
+
+    <!-- 側邊廣告（上方） -->
+    <div id="news-side-top" class="hidden">
+      <div class="page-header" style="margin-bottom:14px;">
+        <div style="font-size:13px;color:#888;">每 4 秒切換一張，依排序循環</div>
+        <button class="btn btn-purple btn-sm" onclick="goEdit('news-side','新增')">＋ 新增廣告</button>
+      </div>
+      <div class="card card-no-pad">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>排序</th><th>底圖</th><th>前台顯示</th><th>排程狀態</th><th>上架時間</th><th>下架時間</th><th>建立時間</th><th>最後處理</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="order-num">1</span></td>
+                <td class="td-thumb-side"><img src="https://via.placeholder.com/45x70/1a1930/a78bfa?text=ST1" /></td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/03/31 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('news-side','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+              <tr>
+                <td><span class="order-num">2</span></td>
+                <td class="td-thumb-side"><img src="https://via.placeholder.com/45x70/1a1930/60a5fa?text=ST2" /></td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-upcoming">即將開放</span></td>
+                <td style="font-size:12px;">2026/04/01 00:00</td>
+                <td style="font-size:12px;">2026/04/30 23:59</td>
+                <td style="font-size:12px;">2026/03/15</td>
+                <td style="font-size:12px;">1000007</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('news-side','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer-bar">總筆數：<strong>2</strong>&ensp;|&ensp;有效輪播中：<strong>1</strong></div>
+      </div>
+    </div>
+
+    <!-- 側邊廣告（下方） -->
+    <div id="news-side-bot" class="hidden">
+      <div class="page-header" style="margin-bottom:14px;">
+        <div style="font-size:13px;color:#888;">每 5 秒切換一張，依排序循環</div>
+        <button class="btn btn-purple btn-sm" onclick="goEdit('news-side','新增')">＋ 新增廣告</button>
+      </div>
+      <div class="card card-no-pad">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>排序</th><th>底圖</th><th>前台顯示</th><th>排程狀態</th><th>上架時間</th><th>下架時間</th><th>建立時間</th><th>最後處理</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="order-num">1</span></td>
+                <td class="td-thumb-side"><img src="https://via.placeholder.com/45x70/1a1930/fb923c?text=SB1" /></td>
+                <td><span class="badge-on">顯示</span></td>
+                <td><span class="badge-active">進行中</span></td>
+                <td style="font-size:12px;">2026/03/01 00:00</td>
+                <td style="font-size:12px;">2026/03/31 23:59</td>
+                <td style="font-size:12px;">2026/02/28</td>
+                <td style="font-size:12px;">1000020</td>
+                <td><div class="action-cell">
+                  <span class="action-link" onclick="goEdit('news-side','編輯')">✏️ 編輯</span>
+                  <span class="action-delete">🗑️ 刪除</span>
+                </div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer-bar">總筆數：<strong>1</strong>&ensp;|&ensp;有效輪播中：<strong>1</strong></div>
+      </div>
+    </div>
+  </div><!-- /mtab-body-2 -->
+
+</div><!-- /view-main -->
+
+
+<!-- ════════════════════════════════════
+     編輯頁：中段廣告
+════════════════════════════════════ -->
+<div id="view-edit-mid" class="page hidden">
+  <div class="breadcrumb">
+    <span>🏠 首頁</span><span class="sep">›</span>
+    <span>廣告管理</span><span class="sep">›</span>
+    <span data-nav onclick="goMain('mid')" style="cursor:pointer;">廣告版位</span><span class="sep">›</span>
+    <span class="current" id="edit-mid-crumb">中段廣告 · 編輯</span>
+  </div>
+  <div class="edit-title" id="edit-mid-title">中段廣告 · 編輯廣告</div>
+  <div class="edit-sub">
+    <span class="tag tag-purple">中段廣告</span>
+    <span class="tag tag-purple">排序 2</span>
+    ID: 1052
+  </div>
+
+  <div class="lang-tabs">
+    <button class="lang-tab">英文</button><button class="lang-tab active">繁體中文</button>
+    <button class="lang-tab">日文</button><button class="lang-tab">韓文</button>
+    <button class="lang-tab">簡體中文</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">廣告素材</div>
+    <div class="form-row">
+      <div class="form-label">底圖 <span class="required">*</span></div>
+      <div class="image-upload-wrap">
+        <div class="image-slot">
+          <img src="https://via.placeholder.com/200x112/1a1930/a78bfa?text=Game+Ad" width="200" height="112" />
+          <div class="overlay"><button class="btn-del-img">🗑</button></div>
+        </div>
+        <div>
+          <div class="image-add" style="width:112px;height:112px;">
+            <span>＋</span><span class="label">上傳</span>
+          </div>
+          <div class="image-spec">建議尺寸：400 × 225 px<br>格式：JPG / PNG / GIF<br>上限：2 MB</div>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="form-row">
+      <div class="form-label">促銷文字 <span class="required">*</span></div>
+      <div class="input-with-counter">
+        <input class="input" type="text" value="春季改版上線 新地圖大公開" />
+        <span class="counter">13 / 20</span>
+      </div>
+      <div class="form-hint">上限 20 字</div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">跳轉 URL</div>
+      <input class="input" type="text" value="/game/spring-update" style="width:100%;" />
+    </div>
+    <div class="form-row">
+      <div class="form-label">排序 <span class="required">*</span></div>
+      <select class="select" style="width:80px;">
+        <option>1</option><option selected>2</option><option>3</option>
+        <option>4</option><option>5</option><option>6</option>
+        <option>7</option><option>8</option><option>9</option>
+      </select>
+      <div class="form-hint">決定此廣告在輪播序列中的位置（1 最先）</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="schedule-header">
+      <div class="card-title" style="margin-bottom:0;">開放排程設定</div>
+      <span class="schedule-badge-active">進行中</span>
+    </div>
+    <div class="schedule-hint-text" style="color:#4ade80;">當前時間在排程範圍內，正在進行中</div>
+    <div class="schedule-meta"><span style="color:#aaa;">建立時間</span><br>2026/02/28 10:00:00</div>
+    <div class="schedule-options">
+      <div class="schedule-option">
+        <input type="radio" name="mid-pub" id="m-draft" class="radio-c" />
+        <label for="m-draft">不開放（存成草稿）</label>
+      </div>
+      <div>
+        <div class="schedule-option">
+          <input type="radio" name="mid-pub" id="m-open" class="radio-c" checked />
+          <label for="m-open">開放</label>
+        </div>
+        <div class="schedule-times">
+          <div class="schedule-time-field">
+            <span class="schedule-time-label">上架時間</span>
+            <input class="schedule-time-value" type="datetime-local" value="2026-03-01T00:00" />
+          </div>
+          <div class="schedule-time-field">
+            <span class="schedule-time-label">下架時間</span>
+            <input class="schedule-time-value" type="datetime-local" value="2026-03-31T23:59" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="edit-footer">
+    <button class="btn btn-primary">儲存</button>
+    <button class="btn btn-purple" onclick="goMain('mid')">取消</button>
+  </div>
+</div><!-- /view-edit-mid -->
+
+
+<!-- ════════════════════════════════════
+     編輯頁：消息廣告（內嵌 / 側邊 共用）
+════════════════════════════════════ -->
+<div id="view-edit-news" class="page hidden">
+  <div class="breadcrumb">
+    <span>🏠 首頁</span><span class="sep">›</span>
+    <span>廣告管理</span><span class="sep">›</span>
+    <span data-nav onclick="goMain('news')" style="cursor:pointer;">廣告版位</span><span class="sep">›</span>
+    <span class="current" id="edit-news-crumb">消息廣告 · 編輯</span>
+  </div>
+  <div class="edit-title" id="edit-news-title">消息廣告 · 內嵌廣告 · 編輯</div>
+  <div class="edit-sub" id="edit-news-sub">
+    <span class="tag tag-purple" id="edit-news-type-tag">內嵌廣告</span>
+    <span class="tag tag-purple">排序 1</span>
+    ID: 3011
+  </div>
+
+  <div class="lang-tabs">
+    <button class="lang-tab">英文</button><button class="lang-tab active">繁體中文</button>
+    <button class="lang-tab">日文</button><button class="lang-tab">韓文</button>
+    <button class="lang-tab">簡體中文</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">廣告素材</div>
+
+    <!-- 底圖（內嵌：橫版；側邊：直版，靠 JS 切換提示） -->
+    <div class="form-row">
+      <div class="form-label">底圖 <span class="required">*</span></div>
+      <div class="image-upload-wrap">
+        <div class="image-slot" id="news-img-slot">
+          <img id="news-img-preview" src="https://via.placeholder.com/200x90/1a1930/4ade80?text=News+Ad" width="200" height="90" />
+          <div class="overlay"><button class="btn-del-img">🗑</button></div>
+        </div>
+        <div>
+          <div class="image-add" id="news-img-size" style="width:100px;height:90px;">
+            <span>＋</span><span class="label">上傳</span>
+          </div>
+          <div class="image-spec" id="news-img-spec">建議尺寸：800 × 360 px（內嵌橫版）<br>格式：JPG / PNG / GIF｜上限：2 MB</div>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="form-row">
+      <div class="form-label">跳轉 URL</div>
+      <input class="input" type="text" value="/game/spring-update" style="width:100%;" />
+    </div>
+    <div class="form-row">
+      <div class="form-label">排序 <span class="required">*</span></div>
+      <select class="select" style="width:80px;">
+        <option selected>1</option><option>2</option><option>3</option>
+      </select>
+      <div class="form-hint" id="news-sort-hint">決定此廣告在 Cookie 輪替序列中的順序</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="schedule-header">
+      <div class="card-title" style="margin-bottom:0;">開放排程設定</div>
+      <span class="schedule-badge-active">進行中</span>
+    </div>
+    <div class="schedule-hint-text" style="color:#4ade80;">當前時間在排程範圍內，正在進行中</div>
+    <div class="schedule-meta"><span style="color:#aaa;">建立時間</span><br>2026/02/28 10:00:00</div>
+    <div class="schedule-options">
+      <div class="schedule-option">
+        <input type="radio" name="news-pub" id="n-draft" class="radio-c" />
+        <label for="n-draft">不開放（存成草稿）</label>
+      </div>
+      <div>
+        <div class="schedule-option">
+          <input type="radio" name="news-pub" id="n-open" class="radio-c" checked />
+          <label for="n-open">開放</label>
+        </div>
+        <div class="schedule-times">
+          <div class="schedule-time-field">
+            <span class="schedule-time-label">上架時間</span>
+            <input class="schedule-time-value" type="datetime-local" value="2026-03-01T00:00" />
+          </div>
+          <div class="schedule-time-field">
+            <span class="schedule-time-label">下架時間</span>
+            <input class="schedule-time-value" type="datetime-local" value="2026-03-31T23:59" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="edit-footer">
+    <button class="btn btn-primary">儲存</button>
+    <button class="btn btn-purple" onclick="goMain('news')">取消</button>
+  </div>
+</div><!-- /view-edit-news -->
+
+</div><!-- /main -->
+
+<script>
+  // ── State ──
+  let currentNewsSubTab = 'inlay';
+
+  // ── Main Tab ──
+  function switchMainTab(n) {
+    document.getElementById('mtab-body-1').classList.toggle('hidden', n !== 1);
+    document.getElementById('mtab-body-2').classList.toggle('hidden', n !== 2);
+    document.getElementById('mtab-1').classList.toggle('active', n === 1);
+    document.getElementById('mtab-2').classList.toggle('active', n === 2);
+  }
+
+  // ── Sub Tab (橫幅 / 中段) ──
+  function switchSubTab(name) {
+    document.getElementById('sub-banner').classList.toggle('hidden', name !== 'banner');
+    document.getElementById('sub-mid').classList.toggle('hidden', name !== 'mid');
+    document.getElementById('stab-banner').classList.toggle('active', name === 'banner');
+    document.getElementById('stab-mid').classList.toggle('active', name === 'mid');
+  }
+
+  // ── News Sub Tab ──
+  function switchNewsTab(name) {
+    currentNewsSubTab = name;
+    ['inlay','side-top','side-bot'].forEach(k => {
+      document.getElementById('news-' + k.replace('-','') ).classList.toggle('hidden', k !== name);
+      // fix id mapping
+    });
+    document.getElementById('news-inlay').classList.toggle('hidden', name !== 'inlay');
+    document.getElementById('news-side-top').classList.toggle('hidden', name !== 'side-top');
+    document.getElementById('news-side-bot').classList.toggle('hidden', name !== 'side-bot');
+    ['inlay','side-top','side-bot'].forEach(k => {
+      document.getElementById('stab-' + k).classList.toggle('active', k === name);
+    });
+  }
+
+  // ── Navigate to Edit ──
+  function goEdit(type, action) {
+    document.getElementById('view-main').classList.add('hidden');
+    if (type === 'mid') {
+      document.getElementById('view-edit-mid').classList.remove('hidden');
+      document.getElementById('view-edit-news').classList.add('hidden');
+      document.getElementById('edit-mid-title').textContent = '中段廣告 · ' + action + '廣告';
+      document.getElementById('edit-mid-crumb').textContent = '中段廣告 · ' + action;
+    } else {
+      document.getElementById('view-edit-news').classList.remove('hidden');
+      document.getElementById('view-edit-mid').classList.add('hidden');
+      const labels = { 'news-inlay': '內嵌廣告', 'news-side': currentNewsSubTab === 'side-top' ? '側邊廣告（上方）' : '側邊廣告（下方）' };
+      const label = labels[type] || '消息廣告';
+      document.getElementById('edit-news-title').textContent = '消息廣告 · ' + label + ' · ' + action;
+      document.getElementById('edit-news-crumb').textContent = '消息廣告 · ' + action;
+      document.getElementById('edit-news-type-tag').textContent = label;
+      // 側邊廣告換直版圖片提示
+      const isSide = type === 'news-side';
+      document.getElementById('news-img-preview').src = isSide
+        ? 'https://via.placeholder.com/60x100/1a1930/a78bfa?text=Side'
+        : 'https://via.placeholder.com/200x90/1a1930/4ade80?text=News+Ad';
+      document.getElementById('news-img-preview').width  = isSide ? 60  : 200;
+      document.getElementById('news-img-preview').height = isSide ? 100 : 90;
+      document.getElementById('news-img-size').style.cssText = isSide ? 'width:60px;height:100px;' : 'width:100px;height:90px;';
+      document.getElementById('news-img-spec').innerHTML = isSide
+        ? '建議尺寸：300 × 500 px（側邊直版）<br>格式：JPG / PNG / GIF｜上限：2 MB'
+        : '建議尺寸：800 × 360 px（內嵌橫版）<br>格式：JPG / PNG / GIF｜上限：2 MB';
+      document.getElementById('news-sort-hint').textContent = isSide
+        ? '決定此廣告在輪播序列中的順序'
+        : '決定此廣告在 Cookie 輪替序列中的順序';
+    }
+  }
+
+  // ── Navigate back to Main ──
+  function goMain(subHint) {
+    document.getElementById('view-main').classList.remove('hidden');
+    document.getElementById('view-edit-mid').classList.add('hidden');
+    document.getElementById('view-edit-news').classList.add('hidden');
+    if (subHint === 'mid') {
+      switchMainTab(1);
+      switchSubTab('mid');
+    } else if (subHint === 'news') {
+      switchMainTab(2);
+    }
+  }
+</script>
+</body>
+</html>

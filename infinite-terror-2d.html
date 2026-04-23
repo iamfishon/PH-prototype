@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"><title>無限恐怖 · 詛咒莊園</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; width:100vw; height:100vh; }
+canvas {
+  position:fixed; top:50%; left:50%;
+  transform-origin:center center;
+  transform:translate(-50%,-50%) scale(var(--game-scale,1));
+  image-rendering:crisp-edges; image-rendering:pixelated;
+}
+</style>
+</head>
+<body>
+<script>
+(function fitGame(){
+  const W=1920,H=1080;
+  function r(){ document.documentElement.style.setProperty('--game-scale',
+    Math.min(window.innerWidth/W,window.innerHeight/H)); }
+  r(); window.addEventListener('resize',r);
+})();
+</script>
+<script>'use strict';
+
+const W=1920, H=1080, T=64, SC=2;
+
+// ── Game State ──────────────────────────────────
+const GS = {
+  day:1, hour:9, minute:0,
+  inventory:[], flags:{}, alive:true,
+  lastMealHour:7, mealWarned:false,
+};
+const MEAL_HOURS=[7,12,19];
+const CURFEW_HOUR=22;
+
+const CHARS=[
+  {name:'張靜川',role:'醫師',  trait:'判斷+2  體力−1',color:0x4488cc,sprKey:'spr_alex', pSheet:'portraits_male',  pFrame:0, diceBonus:0},
+  {name:'陳若彤',role:'特種兵',trait:'體力+2  速度+1',color:0xcc4444,sprKey:'spr_anna', pSheet:'portraits_female',pFrame:0, diceBonus:0},
+  {name:'吳志遠',role:'記者',  trait:'感知+2  魅力+1',color:0xccaa22,sprKey:'spr_colt', pSheet:'portraits_male',  pFrame:3, diceBonus:0},
+  {name:'唐薇安',role:'賭徒',  trait:'幸運+3  判斷−1',color:0x9944cc,sprKey:'spr_ester',pSheet:'portraits_female',pFrame:6, diceBonus:1},
+  {name:'許彥博',role:'運動員',trait:'速度+2  體力+1',color:0x44aa55,sprKey:'spr_tom',  pSheet:'portraits_male',  pFrame:7, diceBonus:0},
+];
+
+// ═══════════════════════════════════════════════
+// AssignScene
+// ═══════════════════════════════════════════════
+class AssignScene extends Phaser.Scene {
+  constructor(){ super('Assign'); }
+
+  preload(){
+    this.load.image('bg_cemetery',
+      'game_assets/background/PixelHorizons_Background%20V.1.4/Cementerio.png');
+    this.load.spritesheet('portraits_male',
+      'game_assets/Characters/Free%20Portraits/Spritesheet/free_portraits_male.png',
+      {frameWidth:48,frameHeight:40});
+    this.load.spritesheet('portraits_female',
+      'game_assets/Characters/Free%20Portraits/Spritesheet/free_portraits_female.png',
+      {frameWidth:48,frameHeight:40});
+  }
+
+  create(){
+    if(this.textures.exists('bg_cemetery')){
+      this.add.image(W/2,H/2,'bg_cemetery').setDisplaySize(W,H).setTint(0x443322).setDepth(0);
+    } else {
+      this.add.rectangle(W/2,H/2,W,H,0x0a0806).setDepth(0);
+    }
+    const vg=this.add.graphics().setDepth(1);
+    vg.fillGradientStyle(0x000000,0x000000,0x000000,0x000000,0.9,0.9,0,0);
+    vg.fillRect(0,0,W,H*0.4);
+    vg.fillGradientStyle(0x000000,0x000000,0x000000,0x000000,0,0,0.92,0.92);
+    vg.fillRect(0,H*0.6,W,H*0.4);
+
+    const char=Phaser.Utils.Array.GetRandom(CHARS);
+
+    const tg=this.add.graphics().setDepth(3);
+    tg.fillStyle(0x000000,0.85); tg.fillRect(W/2-300,H*0.14-28,600,56);
+    tg.lineStyle(2,0xc89030,0.9); tg.strokeRect(W/2-300,H*0.14-28,600,56);
+    this.add.text(W/2,H*0.14,'■  無限恐怖 · 詛咒莊園  ■',{
+      fontSize:'28px',fontFamily:'monospace',color:'#d4a848',letterSpacing:8
+    }).setOrigin(0.5).setDepth(4);
+
+    let dots=0;
+    const sys=this.add.text(W/2,H*0.3,'系統正在分配角色',{
+      fontSize:'24px',fontFamily:'monospace',color:'#888070',letterSpacing:4
+    }).setOrigin(0.5).setAlpha(0).setDepth(4);
+    this.tweens.add({targets:sys,alpha:1,duration:600});
+    const dt=this.time.addEvent({delay:450,repeat:5,
+      callback:()=>{ dots=(dots+1)%4; sys.setText('系統正在分配角色'+'．'.repeat(dots)); }
+    });
+    this.time.delayedCall(2800,()=>{
+      dt.remove();
+      sys.setText('角色分配完成').setColor('#608060');
+      this.revealChar(char);
+    });
+  }
+
+  revealChar(char){
+    const items=[], a=o=>{ items.push(o); return o; };
+    const cy=H*0.52, cw=820, ch=280;
+
+    const cg=this.add.graphics().setDepth(5);
+    cg.fillStyle(0x000000,0.93); cg.fillRect(W/2-cw/2,cy-ch/2,cw,ch);
+    cg.lineStyle(2,0xc89030,1); cg.strokeRect(W/2-cw/2,cy-ch/2,cw,ch);
+    cg.lineStyle(1,0x7a5820,0.5); cg.strokeRect(W/2-cw/2+5,cy-ch/2+5,cw-10,ch-10);
+    cg.fillStyle(char.color,0.7); cg.fillRect(W/2-cw/2,cy-ch/2,5,ch);
+    a(cg).setAlpha(0);
+
+    if(this.textures.exists(char.pSheet)){
+      const ps=5.2;
+      a(this.add.image(W/2-cw/2+75,cy,char.pSheet,char.pFrame).setScale(ps).setAlpha(0).setDepth(6));
+      const pb=this.add.graphics().setAlpha(0).setDepth(6);
+      pb.lineStyle(1,0xc89030,0.7);
+      pb.strokeRect(W/2-cw/2+75-48*ps/2-2,cy-40*ps/2-2,48*ps+4,40*ps+4);
+      a(pb);
+    }
+
+    a(this.add.text(W/2-cw/2+190,cy-ch/2+22,'你被分配到',{fontSize:'20px',fontFamily:'monospace',color:'#807060'}).setAlpha(0).setDepth(6));
+    a(this.add.text(W/2-cw/2+190,cy-ch/2+54,char.name,{fontSize:'52px',fontFamily:'monospace',fontStyle:'bold',color:'#f0e8d8'}).setAlpha(0).setDepth(6));
+    a(this.add.text(W/2-cw/2+190,cy-ch/2+124,char.role,{fontSize:'26px',fontFamily:'monospace',color:'#c8b898'}).setAlpha(0).setDepth(6));
+    a(this.add.text(W/2-cw/2+190,cy-ch/2+168,char.trait,{fontSize:'22px',fontFamily:'monospace',color:'#88aa88'}).setAlpha(0).setDepth(6));
+    const sg=this.add.graphics().setAlpha(0).setDepth(6);
+    sg.fillStyle(0xc89030,0.35); sg.fillRect(W/2-cw/2+186,cy-ch/2+116,cw-206,1);
+    a(sg);
+
+    this.tweens.add({targets:items,alpha:1,duration:700,ease:'Power2',delay:300});
+
+    this.time.delayedCall(1800,()=>{
+      const by=cy+ch/2+60;
+      const bbg=this.add.graphics().setDepth(6);
+      bbg.fillStyle(0x000000,0.9); bbg.fillRect(W/2-140,by-26,280,52);
+      bbg.lineStyle(1,0xc89030,0.8); bbg.strokeRect(W/2-140,by-26,280,52);
+      const btn=this.add.text(W/2,by,'▶  進入副本',{fontSize:'24px',fontFamily:'monospace',color:'#c8a040'})
+        .setOrigin(0.5).setDepth(7).setInteractive({useHandCursor:true});
+      btn.on('pointerover',()=>btn.setColor('#f0d870'));
+      btn.on('pointerout', ()=>btn.setColor('#c8a040'));
+      btn.on('pointerdown',()=>{
+        btn.disableInteractive();
+        this.cameras.main.fade(500,0,0,0);
+        this.time.delayedCall(500,()=>this.scene.start('Dungeon',{char}));
+      });
+      this.tweens.add({targets:btn,alpha:{from:0.5,to:1},duration:800,yoyo:true,repeat:-1});
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// DungeonScene
+// ═══════════════════════════════════════════════
+class DungeonScene extends Phaser.Scene {
+  constructor(){ super('Dungeon'); }
+
+  init(data){
+    this.char=data.char;
+    this.busy=false;
+    this._lastDir='down';
+    this._dlgObjs=[];
+    this._npcObjs=[];
+    this._npcQueue=[];
+    this._npcDone=null;
+    this._npcWaiting=false;
+    this._npcAdvance=null;
+    this._npcRef=null;
+    // Reset GS
+    GS.day=1; GS.hour=9; GS.minute=0;
+    GS.inventory=[]; GS.flags={}; GS.alive=true;
+    GS.lastMealHour=7; GS.mealWarned=false;
+  }
+
+  preload(){
+    const bb=this.add.rectangle(W/2,H/2,604,44,0x111111).setDepth(100);
+    const bf=this.add.rectangle(W/2-300,H/2,0,40,0xc89030).setOrigin(0,0.5).setDepth(100);
+    const bl=this.add.text(W/2,H/2+40,'載入資源…',{fontSize:'20px',fontFamily:'monospace',color:'#907050'}).setOrigin(0.5).setDepth(100);
+    this.load.on('progress',v=>bf.width=600*v);
+    this.load.on('complete',()=>{ bb.destroy(); bf.destroy(); bl.destroy(); });
+    CHARS.forEach(c=>this.load.spritesheet(c.sprKey,`game_assets/Tileset/${c.sprKey}.png`,{frameWidth:32,frameHeight:32}));
+    this.load.spritesheet('fur1','game_assets/Tileset/Megaprops_furniture_1.png',{frameWidth:320,frameHeight:320});
+    this.load.image('dice0','game_assets/Item_ui_icon/Assets/Individual%20Dice/dice_0_normal.png');
+    this.load.image('dice1','game_assets/Item_ui_icon/Assets/Individual%20Dice/dice_1_normal.png');
+    this.load.image('dice2','game_assets/Item_ui_icon/Assets/Individual%20Dice/dice_2_normal.png');
+  }
+
+  create(){
+    this.genTextures();
+
+    // Player
+    const sk=this.char.sprKey;
+    if(this.textures.exists(sk)){
+      this.player=this.physics.add.sprite(300,H/2,sk,0)
+        .setCollideWorldBounds(true).setDepth(6).setOrigin(0.5,0.85).setScale(SC);
+      this.player.body.setSize(18,14).setOffset(7,18);
+      this.mkAnims();
+    } else {
+      const pg=this.make.graphics({add:false});
+      pg.fillStyle(0x000000,0.25); pg.fillEllipse(20,52,30,10);
+      pg.fillStyle(this.char.color,1); pg.fillEllipse(20,34,26,34);
+      pg.fillStyle(0x000000,1); pg.fillCircle(20,16,10);
+      pg.generateTexture('ptex',40,56); pg.destroy();
+      this.player=this.physics.add.sprite(300,H/2,'ptex').setCollideWorldBounds(true).setDepth(6).setOrigin(0.5,0.85);
+      this._lastDir=null;
+    }
+
+    this.cursors=this.input.keyboard.createCursorKeys();
+    this.wasd=this.input.keyboard.addKeys('W,A,S,D');
+    this.keyZ=this.input.keyboard.addKey('Z');
+
+    // HUD
+    this._hudG=this.add.graphics().setDepth(20).setScrollFactor(0);
+    this.hudTxt=this.add.text(20,14,'',{fontSize:'20px',fontFamily:'monospace',color:'#d4a848'})
+      .setScrollFactor(0).setDepth(21);
+    this._timeG=this.add.graphics().setDepth(20).setScrollFactor(0);
+    this.timeTxt=this.add.text(0,14,'',{fontSize:'18px',fontFamily:'monospace',color:'#a8c8a8'})
+      .setScrollFactor(0).setDepth(21);
+
+    // Inventory (bottom-right)
+    this.buildInvHud();
+
+    // 提示文字放在頂部（不與對話框衝突）
+    this.add.text(W/2,14,'WASD 移動  ·  Z 對話/繼續',{fontSize:'15px',fontFamily:'monospace',color:'#403828'})
+      .setOrigin(0.5,0).setScrollFactor(0).setDepth(20);
+
+    // Rooms & physics
+    this.roomObjs=[]; this.wallGroup=this.physics.add.staticGroup();
+    this.wallCol=null; this.triggers={}; this.npcs=[];
+    this.loadRoom('gate',300,H/2);
+    this.cameras.main.fadeIn(800);
+
+    // Time ticker: 10 game-min per real second
+    this.time.addEvent({delay:1000,loop:true,callback:this.tickTime,callbackScope:this});
+    this.updateTimeHud();
+  }
+
+  genTextures(){
+    if(!this.textures.exists('floor')){
+      const g=this.make.graphics({add:false});
+      g.fillStyle(0x9a7850,1); g.fillRect(0,0,64,64);
+      g.fillStyle(0xa88860,1); g.fillRect(0,0,64,20);
+      g.fillStyle(0x8a6838,1); g.fillRect(0,22,64,20);
+      g.fillStyle(0x967248,1); g.fillRect(0,44,64,20);
+      g.fillStyle(0xb89a70,1); [0,22,44].forEach(y=>g.fillRect(0,y,64,2));
+      g.fillStyle(0x3a2010,0.4); [20,42,62].forEach(y=>g.fillRect(0,y,64,2));
+      g.fillStyle(0x000000,0.08);
+      [14,42].forEach(x=>g.fillRect(x,0,2,20));
+      [8,36].forEach(x=>g.fillRect(x,22,2,20));
+      [22,50].forEach(x=>g.fillRect(x,44,2,20));
+      g.generateTexture('floor',64,64); g.destroy();
+    }
+    if(!this.textures.exists('stone_floor')){
+      const g=this.make.graphics({add:false});
+      g.fillStyle(0x383028,1); g.fillRect(0,0,64,64);
+      g.fillStyle(0x403830,1); g.fillRect(2,2,28,28);
+      g.fillStyle(0x3a3028,1); g.fillRect(34,2,28,28);
+      g.fillStyle(0x3c3228,1); g.fillRect(2,34,28,28);
+      g.fillStyle(0x382e26,1); g.fillRect(34,34,28,28);
+      g.lineStyle(1,0x201a14,1);
+      g.strokeRect(2,2,28,28); g.strokeRect(34,2,28,28);
+      g.strokeRect(2,34,28,28); g.strokeRect(34,34,28,28);
+      g.generateTexture('stone_floor',64,64); g.destroy();
+    }
+    if(!this.textures.exists('grass')){
+      const g=this.make.graphics({add:false});
+      g.fillStyle(0x1a2a10,1); g.fillRect(0,0,64,64);
+      g.fillStyle(0x1e3012,1);
+      [4,18,36,50].forEach(x=>[8,24,40,56].forEach(y=>g.fillRect(x+(y%16),y,6,3)));
+      g.fillStyle(0x142008,0.5); g.fillRect(0,60,64,4);
+      g.generateTexture('grass',64,64); g.destroy();
+    }
+    if(!this.textures.exists('door_tex')){
+      const d=this.make.graphics({add:false});
+      d.fillStyle(0x5a3818,1); d.fillRect(0,0,64,168);
+      d.fillStyle(0x3e2408,1); d.fillRect(8,8,48,152);
+      d.fillStyle(0x7a5428,1); d.fillRect(8,8,48,4); d.fillRect(8,8,4,152);
+      d.fillStyle(0x2a1604,1); d.fillRect(8,156,48,4); d.fillRect(52,8,4,152);
+      d.fillStyle(0x5a3814,0.5); [20,30,42].forEach(x=>d.fillRect(x,12,2,140));
+      d.fillStyle(0xc09040,1); d.fillCircle(46,84,7);
+      d.fillStyle(0xe0b860,1); d.fillCircle(44,82,3);
+      d.generateTexture('door_tex',64,168); d.destroy();
+    }
+  }
+
+  mkAnims(){
+    const k=this.char.sprKey;
+    const mk=(n,s,e)=>{ if(!this.anims.exists(n))
+      this.anims.create({key:n,frames:this.anims.generateFrameNumbers(k,{start:s,end:e}),frameRate:4,repeat:-1}); };
+    mk(`${k}_down`,0,1); mk(`${k}_left`,2,3); mk(`${k}_right`,4,5); mk(`${k}_up`,6,7);
+  }
+
+  // ── Time ─────────────────────────────────────
+  tickTime(){
+    GS.minute+=10;
+    if(GS.minute>=60){ GS.minute-=60; GS.hour++; }
+    if(GS.hour>=24){ GS.hour=0; GS.day++; }
+    if(GS.day>7){ this.triggerEnding(); return; }
+    this.updateTimeHud();
+    if(GS.hour===CURFEW_HOUR && GS.minute===0){
+      this.showPlayerDialog('【警告】宵禁時間到了，立刻回到你的房間！');
+    }
+    for(const mh of MEAL_HOURS){
+      if(GS.hour===mh && GS.minute===0){
+        this.showPlayerDialog(`【提示】用餐時間（${mh}:00）。記得去飯廳用餐。`);
+      }
+    }
+  }
+
+  updateTimeHud(){
+    const h=String(GS.hour).padStart(2,'0');
+    const m=String(GS.minute).padStart(2,'0');
+    const txt=`第 ${GS.day} 天  ${h}:${m}`;
+    this.timeTxt.setText(txt);
+    const tw=this.timeTxt.width+24;
+    const tx=W-tw-14;
+    this.timeTxt.setPosition(tx+12,14);
+    this._timeG.clear();
+    const col=GS.hour>=22||GS.hour<6?0x3355aa:0xc89030;
+    this._timeG.fillStyle(0x000000,0.85); this._timeG.fillRect(tx,8,tw+4,36);
+    this._timeG.lineStyle(1,col,0.7); this._timeG.strokeRect(tx,8,tw+4,36);
+  }
+
+  // ── Inventory ─────────────────────────────────
+  buildInvHud(){
+    const BH=152; // dialog height (must match showPlayerDialog)
+    const slots=6, sw=54, sh=54, gap=6;
+    const totalW=slots*(sw+gap)-gap;
+    const sx0=W-totalW-16, sy=H-BH-sh-16; // 物品欄在對話框上方 16px
+    this._invG=this.add.graphics().setDepth(20).setScrollFactor(0);
+    this._invSlots=[];
+    for(let i=0;i<slots;i++){
+      const sx=sx0+i*(sw+gap);
+      this._invG.fillStyle(0x000000,0.85); this._invG.fillRect(sx,sy,sw,sh);
+      this._invG.lineStyle(1,0x6a4820,0.8); this._invG.strokeRect(sx,sy,sw,sh);
+      this._invSlots.push({cx:sx+sw/2,cy:sy+sh/2});
+    }
+    this._invLabels=[];
+    this.refreshInv();
+  }
+
+  refreshInv(){
+    this._invLabels.forEach(o=>o.destroy()); this._invLabels=[];
+    GS.inventory.forEach((item,i)=>{
+      if(i>=6) return;
+      const sl=this._invSlots[i];
+      const t=this.add.text(sl.cx,sl.cy,item.icon||'?',{fontSize:'22px',fontFamily:'monospace',color:'#d4a848'})
+        .setOrigin(0.5).setDepth(21).setScrollFactor(0);
+      this._invLabels.push(t);
+    });
+  }
+
+  addItem(name,icon){
+    if(GS.inventory.length>=6){ this.showPlayerDialog('背包已滿！'); return false; }
+    GS.inventory.push({name,icon});
+    this.refreshInv();
+    return true;
+  }
+
+  // ── Room ─────────────────────────────────────
+  loadRoom(name,px,py){
+    this.busy=false; this.triggers={};
+    this._dlgObjs.forEach(o=>o.destroy()); this._dlgObjs=[];
+    this._npcObjs.forEach(o=>o.destroy()); this._npcObjs=[];
+    this._npcWaiting=false; this._npcRef=null;
+    this.roomObjs.forEach(o=>o.destroy()); this.roomObjs=[];
+    this.wallGroup.clear(true,true);
+    if(this.wallCol){ this.wallCol.destroy(); this.wallCol=null; }
+    this.npcs.forEach(n=>[n.spr,n.lbl,n.hint].forEach(o=>o&&o.destroy()));
+    this.npcs=[];
+    this.player.setPosition(px,py);
+    this.currentRoom=name;
+    const labels={gate:'莊園大門外',courtyard:'庭院',hall:'一樓大廳',study:'書房（鎖）',kitchen:'廚房'};
+    this.setHud(labels[name]||name);
+    if(name==='gate')      this.buildGate();
+    if(name==='courtyard') this.buildCourtyard();
+    if(name==='hall')      this.buildHall();
+    this.wallCol=this.physics.add.collider(this.player,this.wallGroup);
+    this.wallGroup.refresh();
+    // 進場後所有觸發器套用冷卻，防止出生點在觸發範圍內立刻觸發
+    const _now=this.time.now;
+    for(const t of Object.values(this.triggers)) t.lastFire=_now;
+  }
+
+  setHud(txt){
+    this.hudTxt.setText(txt);
+    const pw=this.hudTxt.width+40,ph=40;
+    this._hudG.clear();
+    this._hudG.fillStyle(0x000000,0.88); this._hudG.fillRect(10,8,pw,ph);
+    this._hudG.lineStyle(1,0xc89030,0.7); this._hudG.strokeRect(10,8,pw,ph);
+  }
+
+  // ── Helpers ───────────────────────────────────
+  W(x,y,w,h){
+    const o=this.add.rectangle(x,y,w,h,0).setAlpha(0);
+    this.physics.add.existing(o,true); this.wallGroup.add(o); this.roomObjs.push(o);
+  }
+  // cooldown(ms): 觸發後的冷卻時間，期間即使 fired=false 也不再觸發
+  addTrigger(n,x,y,r,fn,cooldown=1200){
+    this.triggers[n]={x,y,r,fn,fired:false,cooldown,lastFire:0};
+  }
+  resetTrig(n){ if(this.triggers[n]) this.triggers[n].fired=false; }
+
+  wBlock(x,y,w,h,face='bottom'){
+    const r=this.add.rectangle(x,y,w,h,0x1a1410).setDepth(1); this.roomObjs.push(r);
+    const fs=10; let fx=x,fy=y,fw=w,fh=fs;
+    if(face==='bottom') fy=y+h/2-fs/2;
+    else if(face==='top') fy=y-h/2+fs/2;
+    else if(face==='right'){ fx=x+w/2-fs/2; fw=fs; fh=h; }
+    else if(face==='left'){ fx=x-w/2+fs/2; fw=fs; fh=h; }
+    const f=this.add.rectangle(fx,fy,fw,fh,0x382e20).setDepth(1); this.roomObjs.push(f);
+  }
+
+  door(x,y,flip=false){
+    const d=this.add.sprite(x,y,'door_tex').setDepth(3).setFlipX(flip);
+    this.roomObjs.push(d); return d;
+  }
+
+  furn(x,y,sheet,frame,scale,depth=3){
+    const img=this.add.image(x,y,sheet,frame).setScale(scale).setDepth(depth);
+    this.roomObjs.push(img); return img;
+  }
+
+  lbl(x,y,s,col='#c8a878',size=18){
+    const t=this.add.text(x,y,s,{fontSize:`${size}px`,fontFamily:'monospace',color:col})
+      .setOrigin(0.5).setDepth(4);
+    this.roomObjs.push(t); return t;
+  }
+
+  addNpc(x,y,name,colorHex){
+    const pg=this.make.graphics({add:false});
+    pg.fillStyle(0x000000,0.28); pg.fillEllipse(20,52,32,10);
+    pg.fillStyle(colorHex,1); pg.fillEllipse(20,33,26,32);
+    pg.fillStyle(Math.floor(colorHex*0.6),1); pg.fillCircle(20,14,11);
+    const key='npc_'+name;
+    pg.generateTexture(key,40,56); pg.destroy();
+    const spr=this.add.sprite(x,y,key).setDepth(5).setOrigin(0.5,1);
+    const lbl=this.add.text(x,y-60,name,{fontSize:'16px',fontFamily:'monospace',color:'#c8c8a8'})
+      .setOrigin(0.5).setDepth(5);
+    const hint=this.add.text(x,y-80,'[Z] 對話',{fontSize:'14px',fontFamily:'monospace',color:'#a0906a'})
+      .setOrigin(0.5).setDepth(5).setAlpha(0);
+    this.roomObjs.push(spr,lbl,hint);
+    const npc={x,y,name,colorHex,spr,lbl,hint,talked:false,lines:[],onDone:null};
+    this.npcs.push(npc);
+    return npc;
+  }
+
+  setNpcLines(npc,lines,onDone=null){ npc.lines=lines; npc.onDone=onDone; }
+
+  // ── NPC Dialog ────────────────────────────────
+  showNpcDialog(npc){
+    if(this._npcWaiting || this._npcObjs.length>0) return;
+    this.busy=true;
+    npc.talked=true;
+    this._npcRef=npc;
+    this._npcQueue=[...npc.lines];
+    this._npcDone=npc.onDone;
+    this._advanceNpc();
+  }
+
+  _advanceNpc(){
+    this._npcObjs.forEach(o=>o.destroy()); this._npcObjs=[];
+    this._npcWaiting=false;
+    if(this._npcQueue.length===0){
+      this.busy=false;
+      if(this._npcDone){ const cb=this._npcDone; this._npcDone=null; cb(); }
+      return;
+    }
+    const text=this._npcQueue.shift();
+    const npc=this._npcRef;
+    const BH=152,BY=H-BH;
+    const PS=3.4,PW=48*PS+16;
+    const col='#'+npc.colorHex.toString(16).padStart(6,'0');
+
+    const bg=this.add.graphics().setDepth(30).setScrollFactor(0);
+    bg.fillStyle(0x000000,0.94); bg.fillRect(0,BY,W,BH);
+    bg.lineStyle(2,0xffffff,0.14); bg.lineBetween(0,BY,W,BY);
+    bg.lineStyle(1,npc.colorHex,0.3); bg.lineBetween(0,BY+4,W,BY+4);
+    bg.fillStyle(npc.colorHex,0.8); bg.fillRect(0,BY,5,BH);
+    bg.fillStyle(0x080604,1); bg.fillRect(16,BY+8,PW,BH-16);
+    bg.lineStyle(1,npc.colorHex,0.55); bg.strokeRect(16,BY+8,PW,BH-16);
+    bg.fillStyle(npc.colorHex,0.12); bg.fillRect(18,BY+10,PW-4,BH-20);
+    bg.fillStyle(0x000000,1); bg.fillRect(14,BY-30,PW+4,30);
+    bg.lineStyle(1,0xffffff,0.2); bg.strokeRect(14,BY-30,PW+4,30);
+    bg.fillStyle(npc.colorHex,0.8); bg.fillRect(14,BY-30,PW+4,3);
+
+    const ic=this.add.text(16+PW/2,BY+8+(BH-16)/2,npc.name[0],{
+      fontSize:'52px',fontFamily:'monospace',color:col
+    }).setOrigin(0.5).setDepth(31).setScrollFactor(0);
+    const nameT=this.add.text(16+PW/2,BY-16,npc.name,{
+      fontSize:'16px',fontFamily:'monospace',color:'#e0e0e0'
+    }).setOrigin(0.5).setDepth(31).setScrollFactor(0);
+    const tx=this.add.text(PW+30,BY+18,text,{
+      fontSize:'24px',fontFamily:'monospace',color:'#ffffff',lineSpacing:8,wordWrap:{width:W-PW-80}
+    }).setDepth(31).setScrollFactor(0);
+    const arr=this.add.text(W-24,BY+BH-20,'▼',{fontSize:'20px',fontFamily:'monospace',color:'#aaaaaa'})
+      .setOrigin(1,1).setDepth(31).setScrollFactor(0);
+    this.tweens.add({targets:arr,alpha:{from:0.2,to:1},duration:500,yoyo:true,repeat:-1});
+    const hint=this.add.text(W-110,BY+BH-20,'Z / 點擊繼續',{fontSize:'13px',fontFamily:'monospace',color:'#605040'})
+      .setOrigin(1,1).setDepth(31).setScrollFactor(0);
+
+    // Click zone
+    const zone=this.add.zone(W/2,BY+BH/2,W,BH).setInteractive().setDepth(32).setScrollFactor(0);
+    this._npcClickBlock=true;
+    this.time.delayedCall(200,()=>{ this._npcClickBlock=false; });
+    zone.on('pointerdown',()=>{
+      if(this._npcClickBlock||!this._npcWaiting) return;
+      this._npcWaiting=false;
+      this._npcObjs.forEach(o=>o.destroy()); this._npcObjs=[];
+      this.time.delayedCall(80,()=>this._advanceNpc());
+    });
+
+    this._npcObjs.push(bg,ic,nameT,tx,arr,hint,zone);
+    this._npcWaiting=true;
+  }
+
+  // ── Player Dialog (auto-dismiss) ──────────────
+  showPlayerDialog(text,dur=5000){
+    this._dlgObjs.forEach(o=>o.destroy()); this._dlgObjs=[];
+    const BH=152,BY=H-BH;
+    const hasPt=this.textures.exists(this.char.pSheet);
+    const PS=3.4,PW=hasPt?48*PS+16:0;
+    const bg=this.add.graphics().setDepth(30).setScrollFactor(0);
+    bg.fillStyle(0x000000,0.94); bg.fillRect(0,BY,W,BH);
+    bg.lineStyle(2,0xffffff,0.18); bg.lineBetween(0,BY,W,BY);
+    bg.lineStyle(1,0xc89030,0.35); bg.lineBetween(0,BY+4,W,BY+4);
+    if(hasPt){
+      bg.fillStyle(0x080604,1); bg.fillRect(16,BY+8,PW,BH-16);
+      bg.lineStyle(1,0xc89030,0.6); bg.strokeRect(16,BY+8,PW,BH-16);
+      const nw=PW+4;
+      bg.fillStyle(0x000000,1); bg.fillRect(14,BY-30,nw,30);
+      bg.lineStyle(1,0xffffff,0.25); bg.strokeRect(14,BY-30,nw,30);
+      bg.fillStyle(this.char.color,0.8); bg.fillRect(14,BY-30,nw,3);
+      const portrait=this.add.image(16+PW/2,BY+8+(BH-16)/2,this.char.pSheet,this.char.pFrame)
+        .setScale(PS).setDepth(31).setScrollFactor(0);
+      const nameT=this.add.text(16+PW/2,BY-16,this.char.name,{
+        fontSize:'16px',fontFamily:'monospace',color:'#e0e0e0'
+      }).setOrigin(0.5).setDepth(31).setScrollFactor(0);
+      this._dlgObjs.push(portrait,nameT);
+    }
+    const tx=this.add.text(PW+30,BY+18,text,{
+      fontSize:'24px',fontFamily:'monospace',color:'#ffffff',lineSpacing:8,wordWrap:{width:W-PW-80}
+    }).setDepth(31).setScrollFactor(0);
+    const arr=this.add.text(W-24,BY+BH-20,'▼',{fontSize:'20px',fontFamily:'monospace',color:'#888888'})
+      .setOrigin(1,1).setDepth(31).setScrollFactor(0);
+    this.tweens.add({targets:arr,alpha:{from:0.2,to:1},duration:600,yoyo:true,repeat:-1});
+    this._dlgObjs.push(bg,tx,arr);
+    this.time.delayedCall(dur,()=>{
+      this._dlgObjs.forEach(o=>this.tweens.add({targets:o,alpha:0,duration:500,onComplete:()=>o.destroy()}));
+      this._dlgObjs=[];
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  // Room: 莊園大門外
+  // ══════════════════════════════════════════════
+  buildGate(){
+    // Sky
+    const sky=this.add.rectangle(W/2,H*0.28,W,H*0.56,0x0c0e14).setDepth(0); this.roomObjs.push(sky);
+    // Ground
+    const gnd=this.add.tileSprite(W/2,H*0.65,W,H*0.7,'grass').setDepth(0); this.roomObjs.push(gnd);
+
+    // Moon
+    const moon=this.add.graphics().setDepth(1); this.roomObjs.push(moon);
+    moon.fillStyle(0xd8e8c0,0.9); moon.fillCircle(W*0.82,H*0.13,38);
+    moon.fillStyle(0x0c0e14,1); moon.fillCircle(W*0.82-9,H*0.13-9,30);
+
+    // Manor silhouette (far background)
+    const manor=this.add.graphics().setDepth(1); this.roomObjs.push(manor);
+    manor.fillStyle(0x080608,1);
+    manor.fillRect(W/2-220,H*0.2,440,H*0.4);
+    manor.fillRect(W/2-170,H*0.1,90,H*0.12);
+    manor.fillRect(W/2+80,H*0.13,90,H*0.1);
+    manor.fillRect(W/2-310,H*0.28,90,H*0.32);
+    manor.fillRect(W/2+220,H*0.28,90,H*0.32);
+    manor.fillStyle(0x4a3010,0.65);
+    [-110,-40,40,110].forEach(ox=>manor.fillRect(W/2+ox-10,H*0.28,20,26));
+
+    // Stone path
+    // ── 主幹道（水平，從玩家出生點引導至大門）──────
+    const path=this.add.graphics().setDepth(1); this.roomObjs.push(path);
+    const roadX=T*4, roadW=W-T*8, roadY=H/2-72, roadH=144;
+    // 路面底色（泥土/石板，明顯比草地淺）
+    path.fillStyle(0x4a3c28,1); path.fillRect(roadX,roadY,roadW,roadH);
+    // 路面石板格（橫向排列）
+    const stoneW=80, stoneH=60, stoneGap=6;
+    for(let col=0;col<Math.ceil(roadW/(stoneW+stoneGap));col++){
+      const sx=roadX+col*(stoneW+stoneGap);
+      // 上排石板
+      path.fillStyle(col%2===0?0x564838:0x4e4030,1);
+      path.fillRect(sx,roadY+stoneGap,stoneW,stoneH-stoneGap);
+      // 下排石板（偏移半格製造交錯感）
+      path.fillStyle(col%2===0?0x4e4030:0x564838,1);
+      path.fillRect(sx-(stoneW+stoneGap)/2,roadY+stoneH+stoneGap*2,stoneW,stoneH-stoneGap);
+      // 石板高光（頂部 1px）
+      path.fillStyle(0x6a5840,0.6);
+      path.fillRect(sx+1,roadY+stoneGap+1,stoneW-2,2);
+      path.fillRect(sx-(stoneW+stoneGap)/2+1,roadY+stoneH+stoneGap*2+1,stoneW-2,2);
+    }
+    // 路邊深色縫（上下邊界）
+    path.fillStyle(0x241c10,1);
+    path.fillRect(roadX,roadY,roadW,6);       // 上邊
+    path.fillRect(roadX,roadY+roadH-6,roadW,6); // 下邊
+    // 路邊石條（淺灰色）
+    path.fillStyle(0x5e5040,1);
+    path.fillRect(roadX,roadY+2,roadW,4);
+    path.fillRect(roadX,roadY+roadH-6,roadW,4);
+
+    // Boundary walls (invisible physics + visual hedge)
+    this.wBlock(T*2,H/2,T*4,H,'right');       // left hedge
+    this.W(T*2,H/2,T*4,H);
+    this.wBlock(W/2,T/2,W,T,'bottom');         // top
+    this.W(W/2,T/2,W,T);
+    this.wBlock(W/2,H-T/2,W,T,'top');          // bottom
+    this.W(W/2,H-T/2,W,T);
+    // Right wall with gate gap (gap at H/2 ±90)
+    this.wBlock(W-T*2,H*0.28,T*4,H*0.56-200,'left');
+    this.W(W-T*2,H*0.28,T*4,H*0.56-200);
+    this.wBlock(W-T*2,H*0.76,T*4,H*0.48-T,'left');
+    this.W(W-T*2,H*0.76,T*4,H*0.48-T);
+
+    // Gate bars
+    const gx=W-T*4+16, gy=H/2-88;
+    const gate=this.add.graphics().setDepth(3); this.roomObjs.push(gate);
+    gate.fillStyle(0x282018,1);
+    gate.fillRect(gx,gy,168,9); gate.fillRect(gx,gy+168,168,9);
+    for(let i=0;i<9;i++){
+      gate.fillStyle(0x242016,1); gate.fillRect(gx+6+i*17,gy+9,10,160);
+      gate.fillStyle(0x3a2e18,0.5); gate.fillRect(gx+6+i*17,gy+9,3,160);
+      gate.fillStyle(0x504030,1); gate.fillTriangle(gx+6+i*17,gy+9,gx+16+i*17,gy+9,gx+11+i*17,gy-14);
+    }
+    // Gate posts
+    this.wBlock(W-T*4,H/2-130,22,90,'right');
+    this.wBlock(W-T*4,H/2+130,22,90,'right');
+    this.W(W-T*4,H/2-130,22,90); this.W(W-T*4,H/2+130,22,90);
+
+    // Lanterns
+    [[W-T*4+6,H/2-115],[W-T*4+6,H/2+85]].forEach(([lx,ly])=>{
+      const lg=this.add.graphics().setDepth(4); this.roomObjs.push(lg);
+      lg.fillStyle(0xc8a040,0.9); lg.fillRect(lx-5,ly,10,18);
+      lg.fillStyle(0xffd080,0.25); lg.fillCircle(lx,ly+9,55);
+      lg.fillStyle(0xffd080,0.1); lg.fillCircle(lx,ly+9,88);
+    });
+
+    // Trees
+    [[T*5,T*3.5],[T*5,H-T*3.5],[T*9,T*3],[T*9,H-T*3]].forEach(([tx2,ty])=>{
+      this.wBlock(tx2,ty,T*2,T*4,'bottom');
+      // 碰撞框：樹幹 + 樹冠一起（中心上移，高度加大，寬度覆蓋樹冠最寬處）
+      this.W(tx2,ty-T*1.5,T*3.2,T*7);
+      const tr=this.add.graphics().setDepth(2); this.roomObjs.push(tr);
+      tr.fillStyle(0x09180a,1); tr.fillCircle(tx2,ty-T*2,T*1.6);
+      tr.fillStyle(0x071208,1); tr.fillCircle(tx2-T*0.6,ty-T*1.5,T);
+      tr.fillStyle(0x0b1c0b,0.8); tr.fillCircle(tx2+T*0.5,ty-T*2,T*1.1);
+    });
+
+    // Butler NPC
+    const butler=this.addNpc(W-T*5,H/2,'管家',0x6688bb);
+    this.setNpcLines(butler,[
+      '（你感到一股神秘力量將你牽引，眼前是一座古老的莊園。）',
+      '哦，又來了一位……訪客。歡迎來到「慕容莊園」。',
+      '在您入住期間，有幾條規矩必須遵守，否則後果……自負。',
+      '一、每日三餐準時用餐。\n早上七點、中午十二點、晚上七點。\n飯廳在一樓大廳右側。',
+      '二、晚上十點（22:00）宵禁。\n所有訪客必須在客房就寢，不得在走廊逗留。',
+      '三、嚴禁擅自進入主人的書房與地下室。',
+      '您可以自由參觀庭院與一樓大廳。其餘區域……另行安排。',
+      '（管家微微鞠躬，側身讓開大門。）\n「請進。」',
+    ],()=>{
+      GS.flags.butlerTalked=true;
+      this.resetTrig('to_courtyard'); // 管家說完話後才開放大門
+      this.showPlayerDialog('目標：在莊園中存活 7 天，揭開慕容家族的秘密。\n左下角顯示當前時間，注意宵禁與用餐規定。');
+    });
+
+    this.addTrigger('butler_talk',W-T*5,H/2,T+24,()=>{
+      if(!butler.talked) this.showNpcDialog(butler);
+    });
+
+    this.addTrigger('to_courtyard',W-T*4+80,H/2,88,()=>{
+      if(!GS.flags.butlerTalked){
+        this.showPlayerDialog('管家攔住了你：「請先聽我說明規矩。」');
+        // 不重置，玩家需要去找管家說話後才能進門
+        return;
+      }
+      this.transitionRoom('courtyard',T*4,H/2);
+    });
+
+    this.lbl(W-T*3,H/2+T*2,'→ 庭院','#c8a050',20);
+    this.time.delayedCall(500,()=>this.showPlayerDialog(
+      '你被一股神秘力量牽引，來到一座陌生的莊園門前。\n管家正站在大門旁等候。走近他說話。'));
+  }
+
+  // ══════════════════════════════════════════════
+  // Room: 庭院
+  // ══════════════════════════════════════════════
+  buildCourtyard(){
+    const fl=this.add.tileSprite(W/2,H/2,W,H,'stone_floor').setDepth(0); this.roomObjs.push(fl);
+
+    // Walls
+    this.wBlock(W/2,T/2,W,T,'bottom');        this.W(W/2,T/2,W,T);
+    this.wBlock(W/2,H-T/2,W,T,'top');         this.W(W/2,H-T/2,W,T);
+    this.wBlock(T/2,H/2,T,H,'right');         this.W(T/2,H/2,T,H);
+    this.wBlock(W-T/2,H*0.28,T,H*0.56-200,'left'); this.W(W-T/2,H*0.28,T,H*0.56-200);
+    this.wBlock(W-T/2,H*0.77,T,H*0.46-T,'left');   this.W(W-T/2,H*0.77,T,H*0.46-T);
+
+    // Gate-side door (left)
+    const glL=this.add.rectangle(T-2,H/2,4,150,0xffe8a0,0.5).setDepth(3); this.roomObjs.push(glL);
+    this.door(T/2,H/2,true);
+    this.addTrigger('to_gate',T+14,H/2,T+10,()=>this.transitionRoom('gate',W-T*5,H/2));
+    this.lbl(T+T,H/2+T,'← 大門','#c8a050',18);
+
+    // Hall-side door (right)
+    const glR=this.add.rectangle(W-T+2,H/2,4,150,0xffe8a0,0.5).setDepth(3); this.roomObjs.push(glR);
+    this.door(W-T/2,H/2,false);
+    this.addTrigger('to_hall',W-T-14,H/2,T+10,()=>this.transitionRoom('hall',T*2+20,H/2));
+    this.lbl(W-T*2,H/2+T,'→ 大廳','#c8a050',18);
+
+    // Stone path cross
+    const sp=this.add.graphics().setDepth(1); this.roomObjs.push(sp);
+    sp.fillStyle(0x282018,0.6);
+    sp.fillRect(T,H/2-28,W-T*2,56);
+    sp.fillRect(W/2-28,T,56,H-T*2);
+
+    // Fountain
+    const fx=W/2, fy=H/2;
+    const fou=this.add.graphics().setDepth(2); this.roomObjs.push(fou);
+    fou.fillStyle(0x181410,1); fou.fillCircle(fx,fy,96);
+    fou.lineStyle(8,0x504030,1); fou.strokeCircle(fx,fy,96);
+    fou.fillStyle(0x182030,0.9); fou.fillCircle(fx,fy,88);
+    fou.fillStyle(0x203040,0.6); fou.fillCircle(fx,fy,64);
+    fou.fillStyle(0x504030,1); fou.fillRect(fx-12,fy-44,24,44);
+    fou.fillStyle(0x605040,1); fou.fillCircle(fx,fy-46,20);
+    fou.fillStyle(0x28405a,0.5); fou.fillCircle(fx-22,fy+24,14); fou.fillCircle(fx+28,fy+32,11);
+    this.W(fx,fy,196,196);
+
+    // Garden beds (corners)
+    [[W*0.22,T*3.5],[W*0.78,T*3.5],[W*0.22,H-T*3.5],[W*0.78,H-T*3.5]].forEach(([bx,by])=>{
+      const bd=this.add.graphics().setDepth(2); this.roomObjs.push(bd);
+      bd.fillStyle(0x18100a,1); bd.fillRect(bx-68,by-40,136,80);
+      bd.lineStyle(2,0x4a3020,1); bd.strokeRect(bx-68,by-40,136,80);
+      bd.fillStyle(0x0a1608,1);
+      [0,1,2,3].forEach(i=>bd.fillCircle(bx-44+i*30,by+Phaser.Math.Between(-8,8),Phaser.Math.Between(10,18)));
+      this.W(bx,by,136,80);
+    });
+
+    // Statues
+    [[T*4,H*0.25],[T*4,H*0.75],[W-T*4,H*0.25],[W-T*4,H*0.75]].forEach(([sx,sy])=>{
+      const st=this.add.graphics().setDepth(3); this.roomObjs.push(st);
+      st.fillStyle(0x4a4038,1); st.fillRect(sx-14,sy-52,28,52);
+      st.fillStyle(0x565048,1); st.fillCircle(sx,sy-62,19);
+      st.fillStyle(0x3a3028,1); st.fillRect(sx-22,sy,44,14);
+      this.W(sx,sy-26,28,66);
+    });
+
+    // Old Gardener Ghost NPC
+    const gard=this.addNpc(W*0.73,H*0.7,'老園丁幽靈',0x88aacc);
+    this.setNpcLines(gard,[
+      '（一個透明的老人身影從花圃後飄出，眼神哀傷。）',
+      '你……你也是被困在這裡的嗎……',
+      '我在這座庭院工作了四十年，直到那對孩子……出現。',
+      '他們白天看起來乖巧無害，但深夜……（顫抖）',
+      '注意那對雙胞胎。注意月圓之夜。',
+      '（老人伸出透明的手，塞給你一個泛黃的護身符，隨即消散。）',
+    ],()=>{
+      if(!GS.flags.gotCharm){
+        GS.flags.gotCharm=true;
+        this.addItem('護身符（老舊）','☽');
+        this.time.delayedCall(200,()=>this.showPlayerDialog('取得：護身符（老舊）\n——據說能感知附近的不祥之物。'));
+      }
+    });
+    this.addTrigger('gard_talk',W*0.73,H*0.7,T+20,()=>{
+      if(!gard.talked) this.showNpcDialog(gard);
+    });
+
+    this.time.delayedCall(400,()=>this.showPlayerDialog(
+      '庭院。石板路長滿青苔，古老噴泉的水聲迴盪在靜謐夜空中。\n一個透明的老人影子在花圃旁徘徊……'));
+  }
+
+  // ══════════════════════════════════════════════
+  // Room: 一樓大廳
+  // ══════════════════════════════════════════════
+  buildHall(){
+    const fl=this.add.tileSprite(W/2,H/2,W,H,'floor').setDepth(0); this.roomObjs.push(fl);
+
+    // Walls
+    this.wBlock(W/2,T/2,W,T,'bottom');        this.W(W/2,T/2,W,T);
+    this.wBlock(W/2,H-T/2,W,T,'top');         this.W(W/2,H-T/2,W,T);
+    // Left wall (courtyard door gap H/2 ±90)
+    this.wBlock(T/2,H*0.28,T,H*0.56-200,'right'); this.W(T/2,H*0.28,T,H*0.56-200);
+    this.wBlock(T/2,H*0.77,T,H*0.46-T,'right');   this.W(T/2,H*0.77,T,H*0.46-T);
+    // Right wall (study door gap)
+    this.wBlock(W-T/2,H*0.28,T,H*0.56-200,'left'); this.W(W-T/2,H*0.28,T,H*0.56-200);
+    this.wBlock(W-T/2,H*0.77,T,H*0.46-T,'left');   this.W(W-T/2,H*0.77,T,H*0.46-T);
+
+    // Courtyard door (left)
+    const glL=this.add.rectangle(T-2,H/2,4,150,0xffe8a0,0.5).setDepth(3); this.roomObjs.push(glL);
+    this.door(T/2,H/2,true);
+    this.addTrigger('to_courtyard',T+14,H/2,T+10,()=>this.transitionRoom('courtyard',W-T*2-20,H/2));
+    this.lbl(T+T,H/2+T,'← 庭院','#c8a050',18);
+
+    // Study door (right, locked)
+    const glR=this.add.rectangle(W-T+2,H/2,4,150,0x884422,0.4).setDepth(3); this.roomObjs.push(glR);
+    this.door(W-T/2,H/2,false);
+    this.addTrigger('to_study',W-T-14,H/2,T+10,()=>{
+      this.showPlayerDialog('書房的門鎖著。門縫裡透出一絲奇異的光……\n（需要特定鑰匙才能進入）');
+      this.resetTrig('to_study');
+    });
+    this.lbl(W-T*2,H/2+T,'書房（鎖）','#886644',16);
+
+    // Furniture
+    if(this.textures.exists('fur1')){
+      // Fireplace (north center)
+      this.furn(W/2,T+82,'fur1',0,0.46);
+      this.W(W/2,T+82,150,104);
+      this.lbl(W/2,T+150,'壁爐','#c8a050');
+
+      // Bookshelf (top-right)
+      this.furn(W-T*4,T*3.5,'fur1',2,0.44);
+      this.W(W-T*4,T*3.5,142,140);
+      this.lbl(W-T*4,T*3.5+84,'書架');
+
+      // Wardrobe (bottom-left)
+      this.furn(T*4,H-T*4,'fur1',1,0.44);
+      this.W(T*4,H-T*4,142,140);
+      this.lbl(T*4,H-T*4+84,'衣櫃');
+
+      // Long table (center)
+      this.furn(W/2,H/2+60,'fur1',10,0.38);
+      this.W(W/2,H/2+60,124,64);
+      this.lbl(W/2,H/2+108,'長桌');
+    }
+
+    // Staircase (decorative, south-center-right)
+    const stx=W/2+T*3.5, sty=H-T*3;
+    const st=this.add.graphics().setDepth(2); this.roomObjs.push(st);
+    for(let i=0;i<5;i++){
+      st.fillStyle(0x2a1e10+(i*0x060402),1);
+      st.fillRect(stx-58+i*12,sty-i*16,116-i*24,16);
+      st.lineStyle(1,0x4a3020,0.6);
+      st.strokeRect(stx-58+i*12,sty-i*16,116-i*24,16);
+    }
+    this.lbl(stx,sty-T,'二樓 ↑','#907050',16);
+    this.W(stx,sty-24,116,64);
+    this.addTrigger('to_2f',stx,sty-24,60,()=>{
+      this.showPlayerDialog('（通往二樓的樓梯。管家說過，宵禁前不需要上去。）');
+      this.resetTrig('to_2f');
+    });
+
+    // Portrait paintings on wall
+    [[W*0.28,T+24],[W*0.72,T+24]].forEach(([px,py])=>{
+      const pg=this.add.graphics().setDepth(2); this.roomObjs.push(pg);
+      pg.fillStyle(0x0a0806,1); pg.fillRect(px-30,py-38,60,76);
+      pg.lineStyle(2,0x6a4820,1); pg.strokeRect(px-30,py-38,60,76);
+      pg.fillStyle(0x2a1a0e,1); pg.fillRect(px-22,py-30,44,60);
+      pg.fillStyle(0x1a1008,1); pg.fillCircle(px,py-10,14); pg.fillRect(px-13,py+4,26,22);
+    });
+
+    // Fireplace event
+    this.addTrigger('fireplace_evt',W/2,T+82,T+44,()=>{
+      this.showPlayerDialog(
+        '壁爐餘燼散發著微弱的暖意。\n壁爐上方掛著一幅家族肖像——\n畫中一對雙胞胎正微笑地注視著你。');
+      this.resetTrig('fireplace_evt');
+    });
+
+    // Maid Ghost NPC
+    const maid=this.addNpc(W*0.32,H*0.62,'女傭幽靈 阿秀',0xcc88aa);
+    this.setNpcLines(maid,[
+      '（一個穿著舊式女傭服的透明身影飄過來，神情緊張。）',
+      '噓……小聲點。主人耳朵很靈的。',
+      '你是新來的調查者吧……我就知道副本又要開始了。',
+      '你必須知道一件事：那對雙胞胎白天非常乖巧，但是——',
+      '每到月圓之夜，他們會完全變成另一副模樣。',
+      '今晚不是月圓，你還安全。但三天後……小心點。',
+      '如果你在走廊上看到兩個小孩同時向你微笑——\n轉頭就跑，別遲疑。',
+      '（阿秀消失前低語）\n「替我找到真相……我的名字是阿秀。」',
+    ],()=>{
+      GS.flags.maidTalked=true;
+      // Doctor role gets extra observation
+      if(this.char.role==='醫師'){
+        this.time.delayedCall(800,()=>this.showPlayerDialog(
+          '[醫師特殊感知]\n你注意到阿秀的創傷分布極不自然——\n不像意外，更像某種儀式留下的痕跡。\n這個線索已記錄在腦中。'));
+        GS.flags.doctorClue=true;
+      }
+    });
+    this.addTrigger('maid_talk',W*0.32,H*0.62,T+20,()=>{
+      if(!maid.talked) this.showNpcDialog(maid);
+    });
+
+    this.time.delayedCall(400,()=>this.showPlayerDialog(
+      '一樓大廳。高挑的天花板、搖曳的燭光，還有某種說不清楚的壓迫感。\n一個透明的女傭身影在大廳角落裡徘徊……'));
+  }
+
+  // ── Dice ────────────────────────────────────
+  openDice(title,desc,target,onResult){
+    if(this.busy) return;
+    this.busy=true; this.player.setVelocity(0,0);
+    const cx=W/2,cy=H/2,ui=[],PW=900,PH=700;
+    const useDI=this.textures.exists('dice0');
+    const bonus=(this.char.diceBonus||0);
+
+    ui.push(this.add.rectangle(cx,cy,W,H,0x000000,0.7).setDepth(40));
+    const pg=this.add.graphics().setDepth(41);
+    pg.fillStyle(0x000000,0.97); pg.fillRect(cx-PW/2,cy-PH/2,PW,PH);
+    pg.lineStyle(2,0xc89030,1); pg.strokeRect(cx-PW/2,cy-PH/2,PW,PH);
+    pg.lineStyle(1,0x7a5820,0.5); pg.strokeRect(cx-PW/2+5,cy-PH/2+5,PW-10,PH-10);
+    pg.fillStyle(0xc89030,0.1); pg.fillRect(cx-PW/2+2,cy-PH/2+2,PW-4,56);
+    ui.push(pg);
+
+    ui.push(this.add.text(cx,cy-PH/2+30,`■  ${title}  ■`,{fontSize:'26px',fontFamily:'monospace',color:'#d4a848',letterSpacing:8}).setOrigin(0.5).setDepth(42));
+    const sep=this.add.graphics().setDepth(42);
+    sep.fillStyle(0xc89030,0.4); sep.fillRect(cx-PW/2+20,cy-PH/2+60,PW-40,1); ui.push(sep);
+    ui.push(this.add.text(cx,cy-PH/2+96,desc,{fontSize:'22px',fontFamily:'monospace',color:'#e8dcc8',align:'center'}).setOrigin(0.5).setDepth(42));
+    const bonusTxt=bonus>0?`  ＋${bonus}（${this.char.role}）`:'';
+    ui.push(this.add.text(cx,cy-PH/2+176,`目標 ≥ ${target}  ·  擲 6 顆骰  ·  分佈 0/1/2${bonusTxt}`,
+      {fontSize:'18px',fontFamily:'monospace',color:'#907050'}).setOrigin(0.5).setDepth(42));
+
+    const diceV=[0,0,0,0,0,0];
+    const DXS=[cx-275,cx-165,cx-55,cx+55,cx+165,cx+275], DY=cy+10;
+    let diceImgs=null, diceG=null;
+    if(useDI){
+      diceImgs=DXS.map(dx=>{const i=this.add.image(dx,DY,'dice0').setScale(3.8).setDepth(42);ui.push(i);return i;});
+    } else {
+      diceG=this.add.graphics().setDepth(42); ui.push(diceG);
+    }
+    const drawDice=()=>{
+      if(useDI){ diceImgs.forEach((img,i)=>img.setTexture(diceV[i]===0?'dice0':diceV[i]===1?'dice1':'dice2')); }
+      else {
+        diceG.clear();
+        DXS.forEach((dx,i)=>{
+          const v=diceV[i],S=80;
+          diceG.fillStyle(0x000000,0.3); diceG.fillRoundedRect(dx-S/2+4,DY-S/2+4,S,S,10);
+          diceG.fillStyle(0x1a1208,1); diceG.fillRoundedRect(dx-S/2,DY-S/2,S,S,10);
+          diceG.lineStyle(2,v===0?0x441818:0x6a4820,1); diceG.strokeRoundedRect(dx-S/2,DY-S/2,S,S,10);
+          if(v===0){diceG.lineStyle(3,0x882222,0.8);diceG.lineBetween(dx-18,DY-18,dx+18,DY+18);diceG.lineBetween(dx+18,DY-18,dx-18,DY+18);}
+          else if(v===1){diceG.fillStyle(0xcc9944,1);diceG.fillCircle(dx,DY,10);}
+          else{diceG.fillStyle(0xcc9944,1);diceG.fillCircle(dx-16,DY-16,8);diceG.fillCircle(dx+16,DY+16,8);}
+        });
+      }
+    };
+    drawDice();
+
+    const roll=this.add.text(cx,cy+PH/2-180,'[ 擲骰 ]',{fontSize:'30px',fontFamily:'monospace',color:'#c89030'})
+      .setOrigin(0.5).setDepth(42).setInteractive({useHandCursor:true}); ui.push(roll);
+    this.tweens.add({targets:roll,alpha:{from:0.5,to:1},duration:700,yoyo:true,repeat:-1});
+    roll.on('pointerover',()=>roll.setColor('#f0d060'));
+    roll.on('pointerout', ()=>roll.setColor('#c89030'));
+    roll.on('pointerdown',()=>{
+      roll.disableInteractive().setColor('#2a1808');
+      this._rollDice(diceV,drawDice,cx,cy,ui,PH,target,bonus,onResult);
+    });
+  }
+
+  _rollDice(diceV,draw,cx,cy,ui,PH,target,bonus,onResult){
+    const FACES=[0,0,1,1,1,2]; let tick=0;
+    const doTick=()=>{
+      tick++;
+      const fin=tick===30;
+      diceV.forEach((_,i)=>{
+        if((!fin&&(tick<20||tick%(i+1)===0))||fin)
+          diceV[i]=fin?Phaser.Utils.Array.GetRandom(FACES):Phaser.Math.Between(0,2);
+      });
+      draw();
+      if(fin) this.time.delayedCall(700,()=>this._showDiceResult(diceV.reduce((a,b)=>a+b,0)+bonus,cx,cy,ui,PH,target,onResult));
+      else    this.time.delayedCall(Math.floor(40+(tick/30)*120),doTick);
+    };
+    this.time.delayedCall(40,doTick);
+  }
+
+  _showDiceResult(total,cx,cy,ui,PH,target,onResult){
+    const ok=total>=target;
+    ui.push(this.add.text(cx,cy+PH/2-225,`合計  ${total}  點`,
+      {fontSize:'28px',fontFamily:'monospace',color:ok?'#88cc88':'#cc8888'}).setOrigin(0.5).setDepth(43));
+    ui.push(this.add.text(cx,cy+PH/2-183,ok?'—— 判定成功 ——':'—— 判定失敗 ——',
+      {fontSize:'32px',fontFamily:'monospace',fontStyle:'bold',color:ok?'#66ee66':'#ee6666'}).setOrigin(0.5).setDepth(43));
+    const cont=this.add.text(cx,cy+PH/2-118,'[ 繼續 ]',{fontSize:'26px',fontFamily:'monospace',color:'#a89060'})
+      .setOrigin(0.5).setDepth(43).setInteractive({useHandCursor:true});
+    ui.push(cont);
+    this.tweens.add({targets:cont,alpha:{from:0.3,to:1},duration:800,yoyo:true,repeat:-1});
+    cont.on('pointerover',()=>cont.setColor('#e8d090'));
+    cont.on('pointerout', ()=>cont.setColor('#a89060'));
+    cont.on('pointerdown',()=>{
+      ui.forEach(o=>o.destroy());
+      this.busy=false;
+      if(onResult) onResult(ok);
+    });
+  }
+
+  // ── Death / Ending ────────────────────────────
+  triggerDeath(reason,desc){
+    this.busy=true; this.player.setVelocity(0,0);
+    this.cameras.main.fade(800,0,0,0);
+    this.time.delayedCall(800,()=>this.scene.start('GameOver',{char:this.char,reason,desc}));
+  }
+
+  triggerEnding(){
+    this.cameras.main.fade(1200,0,0,0);
+    this.time.delayedCall(1200,()=>this.scene.start('Ending',{char:this.char}));
+  }
+
+  // ── Update ────────────────────────────────────
+  update(){
+    // Z key: advance NPC dialog (works even when busy)
+    if(this._npcWaiting && Phaser.Input.Keyboard.JustDown(this.keyZ)){
+      this._npcWaiting=false;
+      this._npcObjs.forEach(o=>o.destroy()); this._npcObjs=[];
+      this.time.delayedCall(80,()=>this._advanceNpc());
+      return;
+    }
+
+    if(this.busy){ this.player.setVelocity(0,0); return; }
+
+    let vx=0,vy=0; const spd=300;
+    if(this.cursors.left.isDown  ||this.wasd.A.isDown) vx=-spd;
+    if(this.cursors.right.isDown ||this.wasd.D.isDown) vx= spd;
+    if(this.cursors.up.isDown    ||this.wasd.W.isDown) vy=-spd;
+    if(this.cursors.down.isDown  ||this.wasd.S.isDown) vy= spd;
+    this.player.setVelocity(vx,vy);
+
+    if(this._lastDir!==null){
+      const k=this.char.sprKey;
+      if(vx||vy){
+        if     (vy>0){this.player.anims.play(`${k}_down`, true);this._lastDir='down';}
+        else if(vy<0){this.player.anims.play(`${k}_up`,   true);this._lastDir='up';}
+        else if(vx<0){this.player.anims.play(`${k}_left`, true);this._lastDir='left';}
+        else         {this.player.anims.play(`${k}_right`,true);this._lastDir='right';}
+      } else {
+        this.player.anims.stop();
+        this.player.setFrame({down:0,up:6,left:2,right:4}[this._lastDir]||0);
+      }
+    }
+
+    // NPC hint visibility
+    for(const npc of this.npcs){
+      const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,npc.x,npc.y);
+      if(npc.hint) npc.hint.setAlpha(d<T*2?1:0);
+    }
+
+    // Triggers
+    const now=this.time.now;
+    for(const t of Object.values(this.triggers)){
+      if(t.fired) continue;
+      if(now - t.lastFire < t.cooldown) continue;
+      if(Phaser.Math.Distance.Between(this.player.x,this.player.y,t.x,t.y)<t.r){
+        t.fired=true; t.lastFire=now; t.fn();
+      }
+    }
+  }
+
+  transitionRoom(name,px,py){
+    this.busy=true; this.player.setVelocity(0,0);
+    this.cameras.main.fade(300,0,0,0);
+    this.time.delayedCall(300,()=>{ this.loadRoom(name,px,py); this.cameras.main.fadeIn(300); });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// GameOver Scene
+// ═══════════════════════════════════════════════
+class GameOverScene extends Phaser.Scene {
+  constructor(){ super('GameOver'); }
+  init(data){ this.gdata=data; }
+  create(){
+    const {char,reason,desc}=this.gdata;
+    this.cameras.main.setBackgroundColor('#000');
+    this.cameras.main.fadeIn(1000);
+
+    const g=this.add.graphics();
+    g.fillStyle(0x0a0806,1); g.fillRect(0,0,W,H);
+    g.fillGradientStyle(0x220000,0x220000,0x000000,0x000000,0.7,0.7,0,0);
+    g.fillRect(0,0,W,H*0.5);
+
+    this.add.text(W/2,H*0.28,'— 你死了 —',{
+      fontSize:'72px',fontFamily:'monospace',color:'#cc2222',fontStyle:'bold',letterSpacing:20
+    }).setOrigin(0.5);
+    this.add.text(W/2,H*0.43,reason,{
+      fontSize:'32px',fontFamily:'monospace',color:'#884444',letterSpacing:6
+    }).setOrigin(0.5);
+    if(desc) this.add.text(W/2,H*0.53,desc,{
+      fontSize:'22px',fontFamily:'monospace',color:'#c8b0a0',align:'center',lineSpacing:10
+    }).setOrigin(0.5);
+
+    if(char && this.textures.exists(char.pSheet)){
+      const img=this.add.image(W/2,H*0.72,char.pSheet,char.pFrame).setScale(4).setTint(0x441111).setAlpha(0);
+      this.tweens.add({targets:img,alpha:0.55,duration:2000});
+    }
+
+    this.time.delayedCall(1800,()=>{
+      const btn=this.add.text(W/2,H*0.88,'[ 重新開始 ]',{
+        fontSize:'28px',fontFamily:'monospace',color:'#885555'
+      }).setOrigin(0.5).setInteractive({useHandCursor:true});
+      btn.on('pointerover',()=>btn.setColor('#cc8888'));
+      btn.on('pointerout', ()=>btn.setColor('#885555'));
+      btn.on('pointerdown',()=>{
+        this.cameras.main.fade(500,0,0,0);
+        this.time.delayedCall(500,()=>this.scene.start('Assign'));
+      });
+      this.tweens.add({targets:btn,alpha:{from:0.3,to:1},duration:900,yoyo:true,repeat:-1});
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Ending Scene
+// ═══════════════════════════════════════════════
+class EndingScene extends Phaser.Scene {
+  constructor(){ super('Ending'); }
+  init(data){ this.edata=data; }
+  create(){
+    this.cameras.main.setBackgroundColor('#000');
+    this.cameras.main.fadeIn(1500);
+    this.add.text(W/2,H/2,
+      `${this.edata.char?.name||'你'}在詛咒莊園中存活了 7 天\n真相尚未完全揭曉……\n（結局系統待開放）`,
+      {fontSize:'34px',fontFamily:'monospace',color:'#c8a878',align:'center',lineSpacing:18}
+    ).setOrigin(0.5);
+    this.time.delayedCall(6000,()=>{
+      this.cameras.main.fade(800,0,0,0);
+      this.time.delayedCall(800,()=>this.scene.start('Assign'));
+    });
+  }
+}
+
+new Phaser.Game({
+  type:Phaser.AUTO, width:W, height:H,
+  backgroundColor:'#100c08',
+  physics:{default:'arcade',arcade:{gravity:{y:0},debug:false}},
+  scene:[AssignScene,DungeonScene,GameOverScene,EndingScene],
+});
+</script>
+</body>
+</html>

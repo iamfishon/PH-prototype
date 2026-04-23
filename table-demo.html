@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>表格範本效果</title>
+  <style>
+    body {
+      font-family: -apple-system, "Microsoft JhengHei", sans-serif;
+      font-size: 14px;
+      padding: 32px;
+      color: #333;
+      background: #fff;
+    }
+
+    h2 {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    /* ── Markdown 表格模擬（原本亂換行的效果） ── */
+    .md-table table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .md-table th, .md-table td {
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      vertical-align: top;
+    }
+    .md-table th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+
+    /* ── HTML 表格（固定欄寬，整齊換行） ── */
+    .fixed-table table {
+      border-collapse: collapse;
+      table-layout: fixed;
+      width: 700px;
+    }
+    .fixed-table th, .fixed-table td {
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      vertical-align: top;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .fixed-table th {
+      background: #f5f5f5;
+      font-weight: bold;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ❌ 原本效果：欄寬由瀏覽器自動分配，容易亂換行 -->
+  <div class="section md-table">
+    <h2>❌ 原本（Markdown 表格，欄寬自動）</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>編號</th>
+          <th>狀態名稱</th>
+          <th>顯示文字</th>
+          <th>點擊動作</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>未登入</td>
+          <td>簽到</td>
+          <td>開啟【請先登入視窗】。</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>欲簽到（已登入）</td>
+          <td>簽到</td>
+          <td>1. 執行今日簽到程序<br>2. 發放獎勵至帳戶<br>3. 開啟【獎勵視窗】<br>4. 切換至狀態 3</td>
+          <td>判斷基準：上次簽到時間 &lt; 今日 00:00:00（UTC+8），且尚未簽滿 5 天。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>今日已簽</td>
+          <td>已簽到（按鈕灰色）</td>
+          <td>不可點擊。</td>
+          <td>包含：<br>1. 當日已完成簽到者<br>2. 已簽滿 5 天者</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>簽到活動結束</td>
+          <td>隱藏按鈕，改顯示字串「簽到已結束」</td>
+          <td>無（不可點擊）</td>
+          <td>簽到期限已屆。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>整體活動結束</td>
+          <td>隱藏按鈕，改顯示字串「活動已結束」</td>
+          <td>無（不可點擊）</td>
+          <td>整體活動已徹底關閉。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ✅ 修正效果：固定各欄寬度，換行整齊 -->
+  <div class="section fixed-table">
+    <h2>✅ 修正後（HTML 表格，固定欄寬）</h2>
+    <table>
+      <colgroup>
+        <col style="width: 50px">
+        <col style="width: 100px">
+        <col style="width: 120px">
+        <col style="width: 200px">
+        <col style="width: 210px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>編號</th>
+          <th>狀態名稱</th>
+          <th>顯示文字</th>
+          <th>點擊動作</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>未登入</td>
+          <td>簽到</td>
+          <td>開啟【請先登入視窗】。</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>欲簽到（已登入）</td>
+          <td>簽到</td>
+          <td>1. 執行今日簽到程序<br>2. 發放獎勵至帳戶<br>3. 開啟【獎勵視窗】<br>4. 切換至狀態 3</td>
+          <td>判斷基準：上次簽到時間 &lt; 今日 00:00:00（UTC+8），且尚未簽滿 5 天。</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>今日已簽</td>
+          <td>已簽到（按鈕灰色）</td>
+          <td>不可點擊。</td>
+          <td>包含：<br>1. 當日已完成簽到者<br>2. 已簽滿 5 天者</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>簽到活動結束</td>
+          <td>隱藏按鈕，改顯示字串「簽到已結束」</td>
+          <td>無（不可點擊）</td>
+          <td>簽到期限已屆。</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>整體活動結束</td>
+          <td>隱藏按鈕，改顯示字串「活動已結束」</td>
+          <td>無（不可點擊）</td>
+          <td>整體活動已徹底關閉。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>

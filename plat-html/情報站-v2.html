@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>情報站 v2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: #e8e8e8;
+    display: flex;
+    justify-content: center;
+  }
+
+  .phone-frame {
+    width: 390px;
+    min-height: 100vh;
+    background: #F7F7F7;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Sticky Top Wrapper ── */
+  .sticky-top {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+
+  .sticky-top.hidden {
+    transform: translateX(-50%) translateY(-100%);
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #1a1a1a;
+    color: #fff;
+    text-align: center;
+    padding: 16px;
+    font-size: 15px;
+    letter-spacing: 2px;
+  }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    background: #fff;
+    border-bottom: 1px solid #eee;
+  }
+
+  /* 高度佔位，避免內容被 fixed 蓋住 */
+  .sticky-placeholder {
+    flex-shrink: 0;
+  }
+
+  /* 遊戲圓形 icon 列 */
+  .game-icon-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 8px 10px;
+    gap: 4px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .scroll-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #aaa;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+  }
+
+  .game-icons-scroll {
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+    display: flex;
+    gap: 14px;
+    padding: 0 4px;
+  }
+  .game-icons-scroll::-webkit-scrollbar { display: none; }
+
+  .game-icon-item {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+
+  .game-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ddd;
+    border: 2.5px solid transparent;
+    transition: border-color 0.2s;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #999;
+  }
+
+  .game-icon-item.active .game-avatar {
+    border-color: #F5A623;
+  }
+
+  .game-avatar-label {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    max-width: 52px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
+  .game-icon-item.active .game-avatar-label {
+    color: #F5A623;
+    font-weight: 700;
+  }
+
+  /* 全部選項 */
+  .game-avatar.all-avatar {
+    background: #F5A623;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .game-icon-item.active .all-avatar {
+    border-color: #d4880a;
+  }
+
+  /* 消息類型底線 Tab */
+  .type-tab-row {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 12px;
+  }
+  .type-tab-row::-webkit-scrollbar { display: none; }
+
+  .type-tab {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-bottom: 2.5px solid transparent;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+
+  .type-tab.active {
+    color: #F5A623;
+    border-bottom-color: #F5A623;
+  }
+
+  /* ── Hero Banner ── */
+  .hero {
+    background: linear-gradient(135deg, #2BBFBF 0%, #1A9B9B 100%);
+    text-align: center;
+    padding: 28px 16px 32px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: -20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .hero-scene {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+  }
+
+  .hero-title {
+    font-size: 34px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 6px;
+  }
+
+  /* ── Breadcrumb ── */
+  .breadcrumb {
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #aaa;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+  }
+
+  .breadcrumb span { color: #555; }
+
+  /* ── Card List ── */
+  .card-list {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* 首張卡片：大特寫 */
+  .news-card {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+
+  .card-image {
+    width: 100%;
+    height: 200px;
+    background: #D8D8D8;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 遊戲 icon + 名稱（內容區） */
+  .card-game-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-game-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #bbb;
+    flex-shrink: 0;
+  }
+
+  .card-game-name {
+    font-size: 12px;
+    color: #888;
+    font-weight: 600;
+  }
+
+  /* 遊戲名稱 + 類型 badge 同一行 */
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .card-type-badge {
+    background: #FFF0D6;
+    color: #F5A623;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  /* 卡片內容區 */
+  .card-body {
+    padding: 14px 14px 16px;
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.45;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: #777;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-time {
+    font-size: 12px;
+    color: #bbb;
+  }
+
+  .card-read-more {
+    font-size: 12px;
+    color: #F5A623;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* ── Load More ── */
+  .load-more {
+    text-align: center;
+    padding: 20px 16px 32px;
+  }
+
+  .load-more-btn {
+    background: none;
+    border: 1.5px solid #ddd;
+    border-radius: 24px;
+    padding: 10px 36px;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    font-weight: 600;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .load-more-btn:hover {
+    border-color: #F5A623;
+    color: #F5A623;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    background: #1a1a1a;
+    color: #fff;
+    text-align: center;
+    padding: 16px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+
+  /* 分隔線 */
+  .section-divider {
+    padding: 0 16px 4px;
+    font-size: 12px;
+    color: #bbb;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="phone-frame">
+
+  <!-- Sticky: Header + Filter Bar -->
+  <div class="sticky-top" id="stickyTop">
+  <div class="header">Header</div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <!-- 遊戲圓形 icon 列 -->
+    <div class="game-icon-row">
+      <button class="scroll-btn" id="scrollLeft">&#8249;</button>
+      <div class="game-icons-scroll" id="gameIcons">
+        <div class="game-icon-item active" data-game="all">
+          <div class="game-avatar all-avatar">全部</div>
+          <span class="game-avatar-label">全部</span>
+        </div>
+        <div class="game-icon-item" data-game="playhorny">
+          <div class="game-avatar" style="background:#C8E6C9;"></div>
+          <span class="game-avatar-label">PlayHorny</span>
+        </div>
+        <div class="game-icon-item" data-game="game1">
+          <div class="game-avatar" style="background:#BBDEFB;"></div>
+          <span class="game-avatar-label">遊戲名稱1</span>
+        </div>
+        <div class="game-icon-item" data-game="game2">
+          <div class="game-avatar" style="background:#F8BBD0;"></div>
+          <span class="game-avatar-label">遊戲名稱2</span>
+        </div>
+        <div class="game-icon-item" data-game="game3">
+          <div class="game-avatar" style="background:#FFF9C4;"></div>
+          <span class="game-avatar-label">遊戲名稱3</span>
+        </div>
+        <div class="game-icon-item" data-game="game4">
+          <div class="game-avatar" style="background:#E1BEE7;"></div>
+          <span class="game-avatar-label">遊戲名稱4</span>
+        </div>
+        <div class="game-icon-item" data-game="game5">
+          <div class="game-avatar" style="background:#B2EBF2;"></div>
+          <span class="game-avatar-label">遊戲名稱5</span>
+        </div>
+        <div class="game-icon-item" data-game="game6">
+          <div class="game-avatar" style="background:#FFCCBC;"></div>
+          <span class="game-avatar-label">遊戲名稱6</span>
+        </div>
+        <div class="game-icon-item" data-game="game7">
+          <div class="game-avatar" style="background:#D7CCC8;"></div>
+          <span class="game-avatar-label">遊戲名稱7</span>
+        </div>
+        <div class="game-icon-item" data-game="game8">
+          <div class="game-avatar" style="background:#CFD8DC;"></div>
+          <span class="game-avatar-label">遊戲名稱8</span>
+        </div>
+        <div class="game-icon-item" data-game="game9">
+          <div class="game-avatar" style="background:#DCEDC8;"></div>
+          <span class="game-avatar-label">遊戲名稱9</span>
+        </div>
+      </div>
+      <button class="scroll-btn" id="scrollRight">&#8250;</button>
+    </div>
+
+    <!-- 消息類型底線 Tab -->
+    <div class="type-tab-row">
+      <button class="type-tab active">全部</button>
+      <button class="type-tab">活動</button>
+      <button class="type-tab">維護</button>
+      <button class="type-tab">更新</button>
+      <button class="type-tab">預約</button>
+      <button class="type-tab">攻略</button>
+    </div>
+  </div>
+  </div><!-- /sticky-top -->
+  <div class="sticky-placeholder" id="stickyPlaceholder"></div>
+
+  <!-- Hero Banner -->
+  <div class="hero">
+    <div class="hero-scene">場景</div>
+    <div class="hero-title">情報站</div>
+  </div>
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    首頁 &gt; <span>情報站</span>
+  </div>
+
+  <!-- Card List -->
+  <div class="card-list">
+
+    <div class="news-card">
+      <div class="card-image"></div>
+      <div class="card-body">
+        <div class="card-game-info">
+          
+          <span class="card-game-name">遊戲名稱</span>
+        </div>
+        <div class="card-title">標題標題標題標題標題標題標題標題標題標題標題標題</div>
+        <div class="card-desc">簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介</div>
+        <div class="card-footer">
+          <span class="card-time">2026-04-17 10:00</span>
+          <span class="card-type-badge">活動</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="news-card">
+      <div class="card-image"></div>
+      <div class="card-body">
+        <div class="card-game-info">
+          
+          <span class="card-game-name">遊戲名稱</span>
+        </div>
+        <div class="card-title">標題標題標題標題標題標題標題標題標題標題標題標題</div>
+        <div class="card-desc">簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介</div>
+        <div class="card-footer">
+          <span class="card-time">2026-04-16 15:30</span>
+          <span class="card-type-badge">更新</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="news-card">
+      <div class="card-image"></div>
+      <div class="card-body">
+        <div class="card-game-info">
+          
+          <span class="card-game-name">遊戲名稱</span>
+        </div>
+        <div class="card-title">標題標題標題標題標題標題標題標題標題標題標題標題</div>
+        <div class="card-desc">簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介</div>
+        <div class="card-footer">
+          <span class="card-time">2026-04-15 09:00</span>
+          <span class="card-type-badge">預約</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Load More -->
+  <div class="load-more">
+    <button class="load-more-btn">載入更多</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">footer</div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.game-icon-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.game-icon-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.type-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  const scrollContainer = document.getElementById('gameIcons');
+  document.getElementById('scrollLeft').addEventListener('click', () => {
+    scrollContainer.scrollBy({ left: -140, behavior: 'smooth' });
+  });
+  document.getElementById('scrollRight').addEventListener('click', () => {
+    scrollContainer.scrollBy({ left: 140, behavior: 'smooth' });
+  });
+
+  // Hide on scroll down, show on scroll up
+  const stickyTop = document.getElementById('stickyTop');
+  const placeholder = document.getElementById('stickyPlaceholder');
+
+  const setPlaceholder = () => {
+    placeholder.style.height = stickyTop.offsetHeight + 'px';
+  };
+  setPlaceholder();
+  window.addEventListener('resize', setPlaceholder);
+
+  let lastY = 0;
+  window.addEventListener('scroll', () => {
+    const currentY = window.scrollY;
+    if (currentY > lastY && currentY > 10) {
+      stickyTop.classList.add('hidden');
+    } else {
+      stickyTop.classList.remove('hidden');
+    }
+    lastY = currentY;
+  }, { passive: true });
+</script>
+
+</body>
+</html>

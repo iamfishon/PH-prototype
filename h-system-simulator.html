@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>H-System 會員制度開發手冊與模擬器</title>
+    <style>
+        :root { --primary: #00d2ff; --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9; }
+        body { font-family: 'Segoe UI', 'SF Pro', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; }
+        .layout { display: grid; grid-template-columns: 1fr 400px; gap: 20px; max-width: 1400px; margin: auto; }
+
+        /* 右側參考表樣式 */
+        .reference-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; height: fit-content; }
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; color: #8b949e; }
+        .ref-table th, .ref-table td { border: 1px solid #30363d; padding: 8px 4px; text-align: center; }
+        .ref-table th { background: #0d1117; color: var(--primary); }
+        h3 { color: #fff; font-size: 1rem; margin-top: 0; margin-bottom: 15px; border-left: 4px solid var(--primary); padding-left: 10px; }
+
+        /* 左側模擬器樣式 */
+        .main-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 25px; }
+        .config-box { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 25px; background: #0d1117; padding: 20px; border-radius: 8px; }
+        .field { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.75rem; color: #8b949e; font-weight: bold; }
+        input, select { background: #161b22; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; }
+        button { padding: 10px 25px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; color: #fff; }
+        .btn-run { background: #238636; }
+        .btn-run:hover { background: #2ea043; }
+        .btn-reset { background: #6e40c9; }
+        .btn-reset:hover { background: #8957e5; }
+
+        /* 狀態條 */
+        .state-bar { display: none; background: linear-gradient(90deg, #161b22, #1c2333); border: 1px solid #30363d; border-radius: 8px; padding: 12px 20px; margin-bottom: 15px; font-size: 0.8rem; }
+        .state-bar .state-item { display: inline-block; margin-right: 20px; }
+        .state-bar .state-label { color: #8b949e; }
+        .state-bar .state-val { color: var(--primary); font-weight: bold; }
+
+        /* 計算結果表格 */
+        .calc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .calc-table th, .calc-table td { border: 1px solid var(--border); padding: 12px; text-align: center; }
+        .tag-lv { background: #1f6feb; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .highlight-red { color: #f85149; }
+        .highlight-green { color: #3fb950; font-weight: bold; }
+
+        /* 輪次標題 */
+        .round-header { background: linear-gradient(90deg, #1f6feb22, transparent); border-left: 3px solid #1f6feb; padding: 8px 15px; margin: 20px 0 10px 0; font-size: 0.85rem; color: #58a6ff; font-weight: bold; }
+
+        /* 底部橫幅 */
+        .summary-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .stat-card { background: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+        .val { display: block; font-size: 1.5rem; font-weight: bold; color: var(--primary); margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <div class="main-panel">
+        <h3>🚀 儲值回饋模擬器（連續儲值版）</h3>
+
+        <div class="state-bar" id="stateBar">
+            <span class="state-item"><span class="state-label">累計輪數：</span><span class="state-val" id="stateRound">0</span></span>
+            <span class="state-item"><span class="state-label">累計付費 HC：</span><span class="state-val" id="statePaid">0</span></span>
+            <span class="state-item"><span class="state-label">累計回饋 HC：</span><span class="state-val" id="stateFree">0</span></span>
+        </div>
+
+        <div class="config-box">
+            <div class="field">
+                <label>當前等級</label>
+                <select id="startLv"></select>
+            </div>
+            <div class="field">
+                <label>當前 HP</label>
+                <input type="number" id="curHp" value="0" style="width:80px" min="0">
+            </div>
+            <div class="field">
+                <label>當前等級已用基數</label>
+                <input type="number" id="usedQuota" value="0" style="width:120px" min="0">
+            </div>
+            <div class="field">
+                <label>欲儲值：付費 HC</label>
+                <input type="number" id="inputPaidHc" value="3000" style="width:120px" min="0">
+            </div>
+            <button class="btn-run" onclick="executeDevCalc()">執行模擬</button>
+            <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
+        </div>
+
+        <div id="output" style="display:none;">
+            <div id="roundsContainer"></div>
+
+            <div class="summary-banner">
+                <div class="stat-card"><small>累計付費 HC</small><span class="val" id="resPaid">0</span></div>
+                <div class="stat-card"><small>累計回饋免費 HC</small><span class="val" id="resFree" style="color:#ff9f43">0</span></div>
+                <div class="stat-card"><small>最終等級</small><span class="val" id="resLv">LV.1</span></div>
+                <div class="stat-card"><small>最終 HP / 下級門檻</small><span class="val" id="resHp" style="font-size:1.1rem">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="reference-panel">
+        <h3>📖 會員等級規則表</h3>
+
+        <p style="font-size: 0.7rem; color: #8b949e; margin-bottom: 5px;">* 匯率：$30 TWD = 100 HC = 3 HP</p>
+        <table class="ref-table" style="margin-bottom: 25px;">
+            <thead>
+                <tr>
+                    <th>等級</th>
+                    <th>回饋 %</th>
+                    <th>每月計算基數</th>
+                    <th>上限 (免費)</th>
+                </tr>
+            </thead>
+            <tbody id="rewardRefBody"></tbody>
+        </table>
+
+        <h3>🪜 升級門檻表</h3>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th>級別提升</th>
+                    <th>需 HP</th>
+                    <th>需台幣</th>
+                    <th>需付費 HC</th>
+                </tr>
+            </thead>
+            <tbody id="upgradeRefBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 數據配置
+    const lvConfig = {
+        1: { rate: 0.05, base: 1000, toNext: 270, twd: 2700, hc: 9000 },
+        2: { rate: 0.06, base: 8000, toNext: 300, twd: 3000, hc: 10000 },
+        3: { rate: 0.08, base: 18000, toNext: 600, twd: 6000, hc: 20000 },
+        4: { rate: 0.08, base: 25000, toNext: 800, twd: 8000, hc: 26667 },
+        5: { rate: 0.10, base: 60000, toNext: 2000, twd: 20000, hc: 66667 },
+        6: { rate: 0.10, base: 100000, toNext: 4000, twd: 40000, hc: 133333 },
+        7: { rate: 0.12, base: 200000, toNext: 7000, twd: 70000, hc: 233333 },
+        8: { rate: 0.12, base: 250000, toNext: 10000, twd: 100000, hc: 333333 },
+        9: { rate: 0.14, base: 330000, toNext: 10000, twd: 100000, hc: 333333 },
+        10: { rate: 0.16, base: 450000, toNext: 15000, twd: 150000, hc: 500000 },
+        11: { rate: 0.18, base: 500000, toNext: 0, twd: 0, hc: 0 }
+    };
+
+    // 全域狀態
+    let simState = {
+        totalPaid: 0,
+        totalFree: 0,
+        roundCount: 0,
+        globalStep: 0
+    };
+
+    // 初始化頁面數據
+    window.onload = () => {
+        const startLvSel = document.getElementById('startLv');
+        const rewardBody = document.getElementById('rewardRefBody');
+        const upgradeBody = document.getElementById('upgradeRefBody');
+
+        for (let i = 1; i <= 11; i++) {
+            let conf = lvConfig[i];
+            let opt = document.createElement('option');
+            opt.value = i; opt.text = 'LV.' + i;
+            if (i == 2) opt.selected = true;
+            startLvSel.appendChild(opt);
+
+            rewardBody.innerHTML += `<tr><td>LV.${i}</td><td>${(conf.rate * 100).toFixed(0)}%</td><td>${conf.base.toLocaleString()}</td><td>${(conf.base * conf.rate).toLocaleString()}</td></tr>`;
+
+            if (i < 11) {
+                upgradeBody.innerHTML += `<tr><td>LV.${i}➜${i + 1}</td><td>${conf.toNext.toLocaleString()}</td><td>$${conf.twd.toLocaleString()}</td><td>${conf.hc.toLocaleString()}</td></tr>`;
+            }
+        }
+    };
+
+    function executeDevCalc() {
+        let lv = parseInt(document.getElementById('startLv').value);
+        let currentHp = parseFloat(document.getElementById('curHp').value) || 0;
+        let usedInLv = parseFloat(document.getElementById('usedQuota').value) || 0;
+        let remainingInput = parseFloat(document.getElementById('inputPaidHc').value) || 0;
+
+        if (remainingInput <= 0) return;
+
+        const roundPaid = remainingInput;
+        let roundFree = 0;
+        simState.roundCount++;
+
+        // 建立本輪的 HTML
+        const container = document.getElementById('roundsContainer');
+        const roundDiv = document.createElement('div');
+        roundDiv.innerHTML = `<div class="round-header">第 ${simState.roundCount} 輪儲值 — 投入 ${roundPaid.toLocaleString()} 付費 HC（起始 LV.${lv}，HP ${currentHp.toLocaleString()}）</div>`;
+
+        const table = document.createElement('table');
+        table.className = 'calc-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>等級</th>
+                    <th>處理 HC</th>
+                    <th>獲得 HP</th>
+                    <th>基數剩餘情況</th>
+                    <th>回饋率</th>
+                    <th>獲得回饋</th>
+                    <th>升級動作</th>
+                </tr>
+            </thead>`;
+        const tbody = document.createElement('tbody');
+        table.appendChild(tbody);
+
+        document.getElementById('output').style.display = 'block';
+
+        while (remainingInput > 0 && lv <= 11) {
+            let conf = lvConfig[lv];
+
+            // 自動升級：如果已達門檻且不是最高級，直接升級（不消耗 HC）
+            if (lv < 11 && currentHp >= conf.toNext) {
+                simState.globalStep++;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${simState.globalStep}</td>
+                        <td><span class="tag-lv">LV.${lv}</span></td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td style="font-size:0.75rem; color:#8b949e">自動升級（HP 已達門檻）</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td style="color:#3fb950">▲ 自動升級 ➔ LV.${lv + 1}</td>
+                    </tr>`;
+                lv++;
+                currentHp = 0;
+                usedInLv = 0;
+                continue;
+            }
+
+            let hpNeeded = Math.max(0, conf.toNext - currentHp);
+            let hcToUpgrade = Math.round((hpNeeded / 3) * 100);
+
+            let processHc = 0;
+            let upgradeTriggered = false;
+
+            if (lv < 11 && hcToUpgrade > 0 && remainingInput >= hcToUpgrade) {
+                processHc = hcToUpgrade;
+                remainingInput -= hcToUpgrade;
+                upgradeTriggered = true;
+            } else {
+                processHc = remainingInput;
+                remainingInput = 0;
+            }
+
+            let hpGained = Math.round(processHc * 3 / 100);
+            currentHp += hpGained;
+
+            let quotaAvailable = Math.max(0, conf.base - usedInLv);
+            let eligible = Math.min(processHc, quotaAvailable);
+            let reward = Math.round(eligible * conf.rate);
+            roundFree += reward;
+            usedInLv += eligible;
+
+            simState.globalStep++;
+            tbody.innerHTML += `
+                <tr>
+                    <td>${simState.globalStep}</td>
+                    <td><span class="tag-lv">LV.${lv}</span></td>
+                    <td style="font-weight:bold">${processHc.toLocaleString()}</td>
+                    <td>${hpGained.toLocaleString()}</td>
+                    <td style="text-align:left; font-size:0.75rem">
+                        初始已用: ${(usedInLv - eligible).toLocaleString()}<br>
+                        消耗基數: <span class="highlight-red">-${eligible.toLocaleString()}</span><br>
+                        剩餘可用: <span class="highlight-green">${Math.max(0, conf.base - usedInLv).toLocaleString()}</span>
+                    </td>
+                    <td>${(conf.rate * 100)}%</td>
+                    <td style="color:#ff9f43; font-weight:bold">${reward.toLocaleString()}</td>
+                    <td style="color:${upgradeTriggered ? '#3fb950' : '#8b949e'}">${upgradeTriggered ? '▲ 升級 ➔ LV.' + (lv + 1) : '結算'}</td>
+                </tr>`;
+
+            if (upgradeTriggered) {
+                lv++;
+                currentHp = 0;
+                usedInLv = 0;
+            } else {
+                break;
+            }
+        }
+
+        roundDiv.appendChild(table);
+
+        const roundSummary = document.createElement('div');
+        roundSummary.style.cssText = 'text-align:right; padding:8px 15px; font-size:0.85rem; color:#8b949e;';
+        roundSummary.innerHTML = `本輪回饋合計：<span style="color:#ff9f43; font-weight:bold; font-size:1rem;">${roundFree.toLocaleString()} 免費 HC</span>`;
+        roundDiv.appendChild(roundSummary);
+
+        container.appendChild(roundDiv);
+
+        // 更新累計
+        simState.totalPaid += roundPaid;
+        simState.totalFree += roundFree;
+
+        // 更新摘要
+        document.getElementById('resPaid').innerText = Math.floor(simState.totalPaid).toLocaleString();
+        document.getElementById('resFree').innerText = Math.floor(simState.totalFree).toLocaleString();
+        document.getElementById('resLv').innerText = 'LV.' + lv;
+
+        let hpDisplay = Math.floor(currentHp).toLocaleString();
+        if (lv < 11) {
+            hpDisplay += ' / ' + lvConfig[lv].toNext.toLocaleString();
+        } else {
+            hpDisplay += ' (MAX)';
+        }
+        document.getElementById('resHp').innerText = hpDisplay;
+
+        // 更新狀態條
+        const stateBar = document.getElementById('stateBar');
+        stateBar.style.display = 'block';
+        document.getElementById('stateRound').innerText = simState.roundCount;
+        document.getElementById('statePaid').innerText = Math.floor(simState.totalPaid).toLocaleString();
+        document.getElementById('stateFree').innerText = Math.floor(simState.totalFree).toLocaleString();
+
+        // 自動回填表單（為下一輪做準備）
+        document.getElementById('startLv').value = lv;
+        document.getElementById('curHp').value = Math.floor(currentHp);
+        document.getElementById('usedQuota').value = Math.floor(usedInLv);
+        document.getElementById('inputPaidHc').value = '';
+    }
+
+    function resetAll() {
+        simState = { totalPaid: 0, totalFree: 0, roundCount: 0, globalStep: 0 };
+
+        document.getElementById('roundsContainer').innerHTML = '';
+        document.getElementById('output').style.display = 'none';
+        document.getElementById('stateBar').style.display = 'none';
+
+        document.getElementById('startLv').value = 2;
+        document.getElementById('curHp').value = 0;
+        document.getElementById('usedQuota').value = 0;
+        document.getElementById('inputPaidHc').value = 3000;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayHorny Admin | 廣告管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background: #0e0e1a; color: #d0d0d0; margin: 0; }
+        .brand-font { font-family: 'Oswald', sans-serif; }
+
+        /* Sidebar */
+        .nav-section .nav-header { cursor: pointer; transition: background 0.15s; }
+        .nav-section .nav-header:hover { background: rgba(255,255,255,0.03); }
+        .nav-section .nav-items { display: none; }
+        .nav-section.open .nav-items { display: block; }
+        .nav-section.open .nav-header .fa-chevron-down { transform: rotate(180deg); }
+        .nav-item { transition: all 0.15s; cursor: pointer; }
+        .nav-item:hover { background: rgba(255,255,255,0.04); color: #fff; }
+        .nav-item.active { background: #d13639; color: #fff !important; border-radius: 4px; }
+
+        /* Table */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table thead th { background: #181830; padding: 12px 14px; font-size: 13px; font-weight: 700; color: #888; text-align: left; border-bottom: 2px solid #252545; white-space: nowrap; }
+        .data-table tbody tr { border-bottom: 1px solid #1a1a30; transition: background 0.1s; }
+        .data-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+        .data-table tbody td { padding: 10px 14px; font-size: 13px; vertical-align: middle; }
+
+        /* Sort pill */
+        .sort-pill { display: inline-flex; align-items: center; gap: 6px; background: #7c3aed; color: #fff; font-weight: 700; font-size: 14px; padding: 4px 14px; border-radius: 16px; cursor: pointer; border: none; }
+        .sort-pill .fa-chevron-down { font-size: 8px; opacity: 0.7; }
+
+        /* Badges */
+        .badge-show { background: #22c55e; color: #fff; padding: 2px 14px; border-radius: 4px; font-size: 12px; font-weight: 700; display: inline-block; }
+        .badge-hide { background: #444; color: #888; padding: 2px 14px; border-radius: 4px; font-size: 12px; font-weight: 700; display: inline-block; }
+        .badge-active { background: #22c55e; color: #fff; padding: 2px 14px; border-radius: 14px; font-size: 11px; font-weight: 700; }
+        .badge-group-a { background: #0ff; color: #000; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 900; letter-spacing: 0.05em; }
+        .badge-group-b { background: #bc13fe; color: #fff; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 900; letter-spacing: 0.05em; }
+
+        /* Edit section border */
+        .edit-section { border: 2px solid #d946ef; border-radius: 8px; padding: 24px; }
+
+        /* Language tabs */
+        .lang-tab { flex: 1; padding: 12px; text-align: center; font-weight: 700; font-size: 14px; cursor: pointer; border-radius: 6px; transition: all 0.2s; background: #1a1a30; color: #555; }
+        .lang-tab:hover { background: #252545; color: #888; }
+        .lang-tab.active { color: #fff; }
+        .lang-tab[data-lang="en"].active { background: #374151; }
+        .lang-tab[data-lang="tc"].active { background: #ec4899; }
+        .lang-tab[data-lang="ja"].active { background: #4b5563; }
+        .lang-tab[data-lang="kr"].active { background: #7c3aed; }
+        .lang-tab[data-lang="sc"].active { background: #7c3aed; }
+
+        /* Page buttons */
+        .pg-btn { padding: 6px 16px; background: #252545; color: #ccc; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: background 0.15s; }
+        .pg-btn:hover { background: #353560; }
+
+        /* Action link */
+        .act-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; transition: color 0.15s; }
+        .act-link:hover { color: #fff; }
+
+        /* Page tabs */
+        .page-tab.active { color: #fff; border-bottom-color: #d13639; }
+
+        /* Group card drag */
+        .group-card { transition: opacity 0.15s, transform 0.15s; }
+        .group-card.dragging { opacity: 0.4; transform: scale(0.97); }
+
+        /* Reorder & move buttons */
+        .reorder-btn { color: #555; font-size: 11px; line-height: 1; cursor: pointer; padding: 0 4px; border: none; background: none; transition: color 0.15s; }
+        .reorder-btn:hover { color: #fff; }
+        .move-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; background: #252545; color: #999; padding: 4px 10px; border-radius: 4px; cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
+        .move-btn:hover { background: #353560; color: #fff; }
+
+        /* Toast */
+        .toast-item { animation: toastIn 0.3s ease-out; }
+        @keyframes toastIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+        /* Top action buttons */
+        .top-btn { padding: 8px 18px; font-size: 13px; font-weight: 700; border-radius: 4px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+        .top-btn-primary { background: #d13639; color: #fff; border-color: #d13639; }
+        .top-btn-primary:hover { background: #b01030; }
+        .top-btn-outline { background: transparent; color: #aaa; border-color: #333; }
+        .top-btn-outline:hover { background: #1a1a30; color: #fff; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        /* Image action icons on edit page */
+        .img-action { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; position: absolute; }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="w-56 bg-[#0a0a18] flex flex-col flex-shrink-0 border-r border-[#1a1a30] overflow-y-auto">
+
+    <!-- Logo -->
+    <div class="px-4 pt-5 pb-2">
+        <div class="brand-font text-2xl tracking-wider text-white" style="font-style:italic;">Play<span class="text-[#d13639]">horny</span></div>
+        <div class="text-[11px] text-gray-500 mt-1">User ID: 1000007</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 py-2 px-2 text-[13px]">
+
+        <!-- 遊戲資料 -->
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>遊戲資料</span>
+                <i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+
+        <!-- 前台首頁 -->
+        <div class="nav-section open mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>前台首頁</span>
+                <i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+            <div class="nav-items pl-2 pr-1 pb-1 space-y-0.5">
+                <div class="nav-item px-3 py-2 text-gray-500 text-[12px]">首頁Banner</div>
+                <div class="nav-item px-3 py-2 text-gray-500 text-[12px]">主打遊戲</div>
+                <div class="nav-item px-3 py-2 text-gray-500 text-[12px]">最新活動</div>
+                <div class="nav-item px-3 py-2 text-gray-500 text-[12px]">最新消息</div>
+                <div class="nav-item px-3 py-2 text-gray-500 text-[12px]">單機遊戲</div>
+                <div class="nav-item active px-3 py-2 text-[12px] font-medium" data-page="adBlock" onclick="switchPage('promo')">廣告區塊</div>
+            </div>
+        </div>
+
+        <!-- Other collapsed sections -->
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>客服中心</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>會員中心</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>金流相關</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>代理中心</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>常用工具</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>廣告管理</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+        <div class="nav-section mb-0.5">
+            <div class="nav-header flex items-center justify-between px-3 py-2.5 text-gray-400 font-medium rounded" onclick="toggleNav(this)">
+                <span>信件中心</span><i class="fas fa-chevron-down text-[10px] transition-transform"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Footer -->
+    <div class="px-4 py-3 border-t border-[#1a1a30] space-y-0.5">
+        <div class="text-[10px] text-gray-600">版本號: v4.1.8</div>
+        <div class="text-[10px] text-gray-600">發布時間: 2026-02-23</div>
+        <div class="text-[10px] text-gray-600">環境: prod</div>
+    </div>
+</aside>
+
+
+<!-- ========== MAIN AREA ========== -->
+<div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top Bar -->
+    <header class="h-12 bg-[#0a0a18] border-b border-[#1a1a30] flex items-center justify-end px-5 gap-4 flex-shrink-0">
+        <button class="text-gray-500 hover:text-white transition-colors text-sm"><i class="fas fa-link"></i></button>
+        <button class="text-gray-500 hover:text-white transition-colors text-sm"><i class="fas fa-desktop"></i></button>
+        <button class="text-gray-500 hover:text-white transition-colors text-sm"><i class="fas fa-cog"></i></button>
+        <button class="text-gray-500 hover:text-white transition-colors text-sm"><i class="fas fa-user-circle"></i></button>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 overflow-y-auto p-6" id="main-content">
+
+
+        <!-- ==================== LIST VIEW ==================== -->
+        <div id="view-list">
+
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm mb-4">
+                <span class="text-gray-500 cursor-pointer hover:text-gray-300"><i class="fas fa-home text-xs mr-1"></i>首頁</span>
+                <span class="text-gray-600">&gt;</span>
+                <span class="text-gray-500 cursor-pointer hover:text-gray-300">前台首頁</span>
+                <span class="text-gray-600">&gt;</span>
+                <span class="text-[#ec4899] font-medium">廣告區塊</span>
+            </div>
+
+            <!-- Title + Actions -->
+            <div class="flex items-center justify-between mb-5">
+                <h1 class="text-2xl font-bold text-white">廣告區塊</h1>
+                <div class="flex items-center gap-3">
+                    <button class="top-btn top-btn-primary" onclick="openEdit('add')"><i class="fas fa-plus mr-2 text-xs"></i>新建資料</button>
+                    <button class="top-btn top-btn-outline"><i class="fas fa-broom mr-2 text-xs"></i>清除快取</button>
+                    <button class="top-btn top-btn-outline"><i class="fas fa-sync-alt mr-2 text-xs"></i>刷新</button>
+                </div>
+            </div>
+
+            <!-- ===== Page Tabs ===== -->
+            <div class="flex items-center gap-0 mb-6 border-b border-[#252545]">
+                <button class="page-tab active px-5 py-3 text-sm font-bold border-b-2 transition-all" data-tab="promo" onclick="switchTab('promo')">
+                    促銷橫幅
+                    <span class="ml-1.5 text-[10px] bg-[#d13639] text-white px-1.5 py-0.5 rounded-full font-bold">1</span>
+                </button>
+                <button class="page-tab px-5 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-300 transition-all" data-tab="midAds" onclick="switchTab('midAds')">
+                    中段廣告
+                    <span class="ml-1.5 text-[10px] bg-[#333] text-gray-400 px-1.5 py-0.5 rounded-full font-bold">6</span>
+                </button>
+                <button class="page-tab px-5 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-300 transition-all" data-tab="sidebarAds" onclick="switchTab('sidebarAds')">
+                    側邊廣告<span class="text-[10px] text-gray-600 font-normal ml-1">（僅電腦版）</span>
+                    <span class="ml-1.5 text-[10px] bg-[#333] text-gray-400 px-1.5 py-0.5 rounded-full font-bold">2</span>
+                </button>
+            </div>
+
+
+            <!-- ===== Mid Ads: Group Rotation Settings ===== -->
+            <div id="group-rotation-panel" class="hidden mb-5">
+                <div class="bg-[#141428] border border-[#252545] rounded-lg p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-sync-alt text-[#0ff] text-sm"></i>
+                        <div>
+                            <div class="text-sm font-bold text-white">分組輪替機制</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">每組 3 筆廣告，Cookie 過期後自動切換至下一組</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500">Cookie 冷卻時間</span>
+                        <select class="bg-[#1a1a30] border border-[#252545] text-white text-sm px-3 py-1.5 rounded">
+                            <option value="5">5 分鐘</option>
+                            <option value="10" selected>10 分鐘</option>
+                            <option value="15">15 分鐘</option>
+                            <option value="30">30 分鐘</option>
+                            <option value="60">60 分鐘</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ===== TABLE: 促銷橫幅 ===== -->
+            <div class="bg-[#111125] rounded-lg overflow-hidden mb-5 page-table" data-page="promo">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="w-20">排序</th>
+                            <th class="w-16">ID <i class="fas fa-sort-down text-[10px] ml-1 text-gray-600"></i></th>
+                            <th class="w-20">圖片</th>
+                            <th>檔案名稱</th>
+                            <th class="w-16">顯示</th>
+                            <th class="w-44">建立時間</th>
+                            <th class="w-44">最後處理時間</th>
+                            <th class="w-28">最後處理人員</th>
+                            <th class="w-36">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><button class="sort-pill">2 <i class="fas fa-chevron-down"></i></button></td>
+                            <td class="text-gray-400">302</td>
+                            <td><div class="w-14 h-10 bg-[#1a1a30] rounded overflow-hidden"><img src="https://i0.wp.com/www.lifetoutiao.news/wp-content/uploads/2023/09/%E6%B3%B1%E6%B3%B1%E6%96%B0%E8%81%9E%E7%A8%BF%E7%94%A8%E5%9C%961-1-jpg.webp?w=1600&ssl=1" class="w-full h-full object-cover"></div></td>
+                            <td class="text-white font-medium">Platform_Mega_Sale_1400x200</td>
+                            <td><span class="badge-show">顯示</span></td>
+                            <td class="text-gray-400">2026/02/01 14:30:00</td>
+                            <td class="text-gray-400">2026/02/09 18:32:05</td>
+                            <td class="text-gray-400">1000020</td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <span class="act-link text-blue-400" onclick="openEdit('edit')"><i class="fas fa-pen text-[10px] mr-1"></i>編輯</span>
+                                    <span class="act-link text-red-400" onclick="openDeleteDialog('Platform Mega Sale')"><i class="fas fa-trash text-[10px] mr-1"></i>資料軟刪</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- ===== 中段廣告：上下分組拖曳 ===== -->
+            <div class="page-table hidden mb-5" data-page="midAds">
+                <div class="space-y-5">
+
+                    <!-- ── Group A ── -->
+                    <div class="bg-[#111125] rounded-lg overflow-hidden border border-[#0ff]/20">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between px-4 py-3 bg-[#0ff]/5 border-b border-[#0ff]/20">
+                            <div class="flex items-center gap-2">
+                                <span class="badge-group-a text-[11px] px-2.5 py-0.5">GROUP A</span>
+                                <span class="text-xs text-gray-500" id="group-a-count">3 筆</span>
+                            </div>
+                            <span class="text-[10px] text-gray-600">前台隨機顯示其中一組</span>
+                        </div>
+                        <!-- Drop zone -->
+                        <div class="p-3 space-y-2 min-h-[120px]" id="group-a-zone"
+                             ondragover="event.preventDefault(); this.classList.add('bg-[#0ff]/5')"
+                             ondragleave="this.classList.remove('bg-[#0ff]/5')"
+                             ondrop="dropToGroup(event, 'A')">
+
+                            <div class="group-card flex items-center gap-3 bg-[#1a1a30] rounded px-3 py-2.5 cursor-grab border border-transparent hover:border-[#252545] transition-colors" draggable="true" data-id="401" ondragstart="dragCard(event)">
+                                <i class="fas fa-grip-vertical text-gray-600 text-xs"></i>
+                                <div class="flex flex-col items-center flex-shrink-0" style="gap:1px">
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardUp(this)"><i class="fas fa-caret-up"></i></button>
+                                    <span class="sort-num bg-[#7c3aed] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">1</span>
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardDown(this)"><i class="fas fa-caret-down"></i></button>
+                                </div>
+                                <div class="w-12 h-8 bg-[#252545] rounded overflow-hidden flex-shrink-0"><img src="https://i0.wp.com/www.lifetoutiao.news/wp-content/uploads/2023/09/%E6%B3%B1%E6%B3%B1%E6%96%B0%E8%81%9E%E7%A8%BF%E7%94%A8%E5%9C%961-1-jpg.webp?w=1600&ssl=1" class="w-full h-full object-cover"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-white font-medium truncate">Gaming Gear Sale</div>
+                                    <div class="text-[10px] text-gray-500">廣告 · <span class="badge-show text-[10px] px-1.5 py-0">顯示</span></div>
+                                </div>
+                                <button class="move-btn" onclick="event.stopPropagation(); moveToOtherGroup(this)"><i class="fas fa-arrow-right text-[8px]"></i>移至 B</button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="act-link text-blue-400 text-[11px]" onclick="openEdit('edit')"><i class="fas fa-pen text-[9px]"></i></span>
+                                    <span class="act-link text-red-400 text-[11px]" onclick="openDeleteDialog('Gaming Gear Sale')"><i class="fas fa-trash text-[9px]"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="group-card flex items-center gap-3 bg-[#1a1a30] rounded px-3 py-2.5 cursor-grab border border-transparent hover:border-[#252545] transition-colors" draggable="true" data-id="402" ondragstart="dragCard(event)">
+                                <i class="fas fa-grip-vertical text-gray-600 text-xs"></i>
+                                <div class="flex flex-col items-center flex-shrink-0" style="gap:1px">
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardUp(this)"><i class="fas fa-caret-up"></i></button>
+                                    <span class="sort-num bg-[#7c3aed] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">2</span>
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardDown(this)"><i class="fas fa-caret-down"></i></button>
+                                </div>
+                                <div class="w-12 h-8 bg-[#252545] rounded overflow-hidden flex-shrink-0"><img src="https://p2.bahamut.com.tw/B/2KU/47/16ad9267cb8bc58e38f02e22401n6tn5.JPG?v=1694500086702" class="w-full h-full object-cover"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-white font-medium truncate">Cloud Gaming Now</div>
+                                    <div class="text-[10px] text-gray-500">合作夥伴 · <span class="badge-show text-[10px] px-1.5 py-0">顯示</span></div>
+                                </div>
+                                <button class="move-btn" onclick="event.stopPropagation(); moveToOtherGroup(this)"><i class="fas fa-arrow-right text-[8px]"></i>移至 B</button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="act-link text-blue-400 text-[11px]" onclick="openEdit('edit')"><i class="fas fa-pen text-[9px]"></i></span>
+                                    <span class="act-link text-red-400 text-[11px]" onclick="openDeleteDialog('Cloud Gaming Now')"><i class="fas fa-trash text-[9px]"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="group-card flex items-center gap-3 bg-[#1a1a30] rounded px-3 py-2.5 cursor-grab border border-transparent hover:border-[#252545] transition-colors" draggable="true" data-id="403" ondragstart="dragCard(event)">
+                                <i class="fas fa-grip-vertical text-gray-600 text-xs"></i>
+                                <div class="flex flex-col items-center flex-shrink-0" style="gap:1px">
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardUp(this)"><i class="fas fa-caret-up"></i></button>
+                                    <span class="sort-num bg-[#7c3aed] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">3</span>
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardDown(this)"><i class="fas fa-caret-down"></i></button>
+                                </div>
+                                <div class="w-12 h-8 bg-[#252545] rounded overflow-hidden flex-shrink-0"><img src="https://truth.bahamut.com.tw/s01/202309/816be73fa47f3daee449222a2fe71e89.JPG" class="w-full h-full object-cover"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-white font-medium truncate">New Tech Expo</div>
+                                    <div class="text-[10px] text-gray-500">獨家 · <span class="badge-hide text-[10px] px-1.5 py-0">隱藏</span></div>
+                                </div>
+                                <button class="move-btn" onclick="event.stopPropagation(); moveToOtherGroup(this)"><i class="fas fa-arrow-right text-[8px]"></i>移至 B</button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="act-link text-blue-400 text-[11px]" onclick="openEdit('edit')"><i class="fas fa-pen text-[9px]"></i></span>
+                                    <span class="act-link text-red-400 text-[11px]" onclick="openDeleteDialog('New Tech Expo')"><i class="fas fa-trash text-[9px]"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Group B ── -->
+                    <div class="bg-[#111125] rounded-lg overflow-hidden border border-[#bc13fe]/20">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between px-4 py-3 bg-[#bc13fe]/5 border-b border-[#bc13fe]/20">
+                            <div class="flex items-center gap-2">
+                                <span class="badge-group-b text-[11px] px-2.5 py-0.5">GROUP B</span>
+                                <span class="text-xs text-gray-500" id="group-b-count">3 筆</span>
+                            </div>
+                            <span class="text-[10px] text-gray-600">拖曳卡片可移動至另一組</span>
+                        </div>
+                        <!-- Drop zone -->
+                        <div class="p-3 space-y-2 min-h-[120px]" id="group-b-zone"
+                             ondragover="event.preventDefault(); this.classList.add('bg-[#bc13fe]/5')"
+                             ondragleave="this.classList.remove('bg-[#bc13fe]/5')"
+                             ondrop="dropToGroup(event, 'B')">
+
+                            <div class="group-card flex items-center gap-3 bg-[#1a1a30] rounded px-3 py-2.5 cursor-grab border border-transparent hover:border-[#252545] transition-colors" draggable="true" data-id="404" ondragstart="dragCard(event)">
+                                <i class="fas fa-grip-vertical text-gray-600 text-xs"></i>
+                                <div class="flex flex-col items-center flex-shrink-0" style="gap:1px">
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardUp(this)"><i class="fas fa-caret-up"></i></button>
+                                    <span class="sort-num bg-[#7c3aed] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">1</span>
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardDown(this)"><i class="fas fa-caret-down"></i></button>
+                                </div>
+                                <div class="w-12 h-8 bg-[#252545] rounded overflow-hidden flex-shrink-0"><img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=300&auto=format&fit=crop" class="w-full h-full object-cover"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-white font-medium truncate">Esports Championship</div>
+                                    <div class="text-[10px] text-gray-500">合作夥伴 · <span class="badge-show text-[10px] px-1.5 py-0">顯示</span></div>
+                                </div>
+                                <button class="move-btn" onclick="event.stopPropagation(); moveToOtherGroup(this)"><i class="fas fa-arrow-left text-[8px]"></i>移至 A</button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="act-link text-blue-400 text-[11px]" onclick="openEdit('edit')"><i class="fas fa-pen text-[9px]"></i></span>
+                                    <span class="act-link text-red-400 text-[11px]" onclick="openDeleteDialog('Esports Championship')"><i class="fas fa-trash text-[9px]"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="group-card flex items-center gap-3 bg-[#1a1a30] rounded px-3 py-2.5 cursor-grab border border-transparent hover:border-[#252545] transition-colors" draggable="true" data-id="405" ondragstart="dragCard(event)">
+                                <i class="fas fa-grip-vertical text-gray-600 text-xs"></i>
+                                <div class="flex flex-col items-center flex-shrink-0" style="gap:1px">
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardUp(this)"><i class="fas fa-caret-up"></i></button>
+                                    <span class="sort-num bg-[#7c3aed] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">2</span>
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardDown(this)"><i class="fas fa-caret-down"></i></button>
+                                </div>
+                                <div class="w-12 h-8 bg-[#252545] rounded overflow-hidden flex-shrink-0"><img src="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=300&auto=format&fit=crop" class="w-full h-full object-cover"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-white font-medium truncate">VR Gaming Fest</div>
+                                    <div class="text-[10px] text-gray-500">廣告 · <span class="badge-hide text-[10px] px-1.5 py-0">隱藏</span></div>
+                                </div>
+                                <button class="move-btn" onclick="event.stopPropagation(); moveToOtherGroup(this)"><i class="fas fa-arrow-left text-[8px]"></i>移至 A</button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="act-link text-blue-400 text-[11px]" onclick="openEdit('edit')"><i class="fas fa-pen text-[9px]"></i></span>
+                                    <span class="act-link text-red-400 text-[11px]" onclick="openDeleteDialog('VR Gaming Fest')"><i class="fas fa-trash text-[9px]"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="group-card flex items-center gap-3 bg-[#1a1a30] rounded px-3 py-2.5 cursor-grab border border-transparent hover:border-[#252545] transition-colors" draggable="true" data-id="406" ondragstart="dragCard(event)">
+                                <i class="fas fa-grip-vertical text-gray-600 text-xs"></i>
+                                <div class="flex flex-col items-center flex-shrink-0" style="gap:1px">
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardUp(this)"><i class="fas fa-caret-up"></i></button>
+                                    <span class="sort-num bg-[#7c3aed] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">3</span>
+                                    <button class="reorder-btn" onclick="event.stopPropagation(); moveCardDown(this)"><i class="fas fa-caret-down"></i></button>
+                                </div>
+                                <div class="w-12 h-8 bg-[#252545] rounded overflow-hidden flex-shrink-0"><img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=300&auto=format&fit=crop" class="w-full h-full object-cover"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-white font-medium truncate">Indie Game Awards</div>
+                                    <div class="text-[10px] text-gray-500">獨家 · <span class="badge-show text-[10px] px-1.5 py-0">顯示</span></div>
+                                </div>
+                                <button class="move-btn" onclick="event.stopPropagation(); moveToOtherGroup(this)"><i class="fas fa-arrow-left text-[8px]"></i>移至 A</button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="act-link text-blue-400 text-[11px]" onclick="openEdit('edit')"><i class="fas fa-pen text-[9px]"></i></span>
+                                    <span class="act-link text-red-400 text-[11px]" onclick="openDeleteDialog('Indie Game Awards')"><i class="fas fa-trash text-[9px]"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- ===== TABLE: 側邊廣告 ===== -->
+            <div class="bg-[#111125] rounded-lg overflow-hidden mb-5 page-table hidden" data-page="sidebarAds">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="w-20">排序</th>
+                            <th class="w-16">ID</th>
+                            <th class="w-20">圖片</th>
+                            <th>廣告名稱</th>
+                            <th class="w-16">顯示</th>
+                            <th class="w-44">建立時間</th>
+                            <th class="w-44">最後處理時間</th>
+                            <th class="w-28">最後處理人員</th>
+                            <th class="w-36">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><button class="sort-pill">1 <i class="fas fa-chevron-down"></i></button></td>
+                            <td class="text-gray-400">501</td>
+                            <td><div class="w-14 h-10 bg-gradient-to-br from-[#d13639] to-black rounded overflow-hidden flex items-center justify-center"><span class="text-white text-[8px] font-black">PARTNER</span></div></td>
+                            <td class="text-white font-medium">Exclusive Partner</td>
+                            <td><span class="badge-show">顯示</span></td>
+                            <td class="text-gray-400">2026/01/01 00:00:00</td>
+                            <td class="text-gray-400">2026/02/05 09:20:00</td>
+                            <td class="text-gray-400">1000007</td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <span class="act-link text-blue-400" onclick="openEdit('edit')"><i class="fas fa-pen text-[10px] mr-1"></i>編輯</span>
+                                    <span class="act-link text-red-400" onclick="openDeleteDialog('Exclusive Partner')"><i class="fas fa-trash text-[10px] mr-1"></i>資料軟刪</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><button class="sort-pill">2 <i class="fas fa-chevron-down"></i></button></td>
+                            <td class="text-gray-400">502</td>
+                            <td><div class="w-14 h-10 bg-gradient-to-br from-blue-900 to-black rounded overflow-hidden flex items-center justify-center"><span class="text-white text-[8px] font-black">ESPORTS</span></div></td>
+                            <td class="text-white font-medium">Esports Gear</td>
+                            <td><span class="badge-hide">隱藏</span></td>
+                            <td class="text-gray-400">2026/01/15 14:00:00</td>
+                            <td class="text-gray-400">—</td>
+                            <td class="text-gray-400">1000007</td>
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <span class="act-link text-blue-400" onclick="openEdit('edit')"><i class="fas fa-pen text-[10px] mr-1"></i>編輯</span>
+                                    <span class="act-link text-red-400" onclick="openDeleteDialog('Esports Gear')"><i class="fas fa-trash text-[10px] mr-1"></i>資料軟刪</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- ===== PAGINATION ===== -->
+            <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                    <button class="pg-btn">首頁</button>
+                    <button class="pg-btn">&lt;</button>
+                    <button class="pg-btn">&gt;</button>
+                    <button class="pg-btn">末頁</button>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-400">Showing <span class="text-green-400 font-bold">1</span> of <span class="text-green-400 font-bold">1</span></span>
+                    <span class="text-gray-600">|</span>
+                    <span class="text-gray-400">Go to page</span>
+                    <input type="number" value="1" min="1" class="w-16 bg-[#1a1a30] border border-[#252545] text-white text-sm text-center py-1 rounded">
+                </div>
+                <div class="text-gray-500 text-xs">
+                    總件數：<span class="text-gray-300 font-bold" id="total-count">1</span>
+                    <span class="mx-2 text-gray-700">|</span>
+                    當前件數：<span class="text-gray-300 font-bold" id="current-count">1</span>
+                </div>
+            </div>
+
+        </div>
+        <!-- END LIST VIEW -->
+
+
+        <!-- ==================== EDIT VIEW ==================== -->
+        <div id="view-edit" class="hidden">
+
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm mb-4">
+                <span class="text-gray-500 cursor-pointer hover:text-gray-300"><i class="fas fa-home text-xs mr-1"></i>首頁</span>
+                <span class="text-gray-600">&gt;</span>
+                <span class="text-gray-500 cursor-pointer hover:text-gray-300" id="edit-breadcrumb-parent" onclick="closeEdit()">廣告區塊</span>
+                <span class="text-gray-600">&gt;</span>
+                <span class="text-[#ec4899] font-medium" id="edit-breadcrumb-current">編輯促銷橫幅</span>
+            </div>
+
+            <!-- Title -->
+            <h1 class="text-2xl font-bold text-[#ec4899] mb-6" id="edit-title">促銷橫幅_編輯頁</h1>
+
+            <!-- Language Tabs -->
+            <div class="flex gap-2 mb-6">
+                <div class="lang-tab active" data-lang="en" onclick="switchLang(this)">英文</div>
+                <div class="lang-tab active" data-lang="tc" onclick="switchLang(this)">繁體中文</div>
+                <div class="lang-tab" data-lang="ja" onclick="switchLang(this)">日文</div>
+                <div class="lang-tab" data-lang="kr" onclick="switchLang(this)">韓文</div>
+                <div class="lang-tab" data-lang="sc" onclick="switchLang(this)">簡體中文</div>
+            </div>
+
+
+            <!-- Content Section -->
+            <div class="edit-section mb-6">
+
+                <h3 class="text-sm font-bold text-white mb-4" id="edit-section-label">促銷橫幅</h3>
+
+                <!-- Image Upload -->
+                <div class="mb-6">
+                    <div class="relative inline-block">
+                        <div class="w-64 h-44 bg-[#1a1a30] rounded-lg overflow-hidden border border-[#252545] flex items-center justify-center cursor-pointer" id="edit-img-area" onclick="document.getElementById('edit-file-input').click()">
+                            <div id="edit-img-placeholder" class="text-center">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-gray-600 mb-2"></i>
+                                <p class="text-xs text-gray-500">點擊上傳圖片</p>
+                            </div>
+                            <img src="" id="edit-img-preview" class="hidden w-full h-full object-cover">
+                        </div>
+                        <!-- Action icons -->
+                        <div class="img-action bg-blue-500 text-white top-2 left-2" title="圖片資訊"><i class="fas fa-info"></i></div>
+                        <div class="img-action bg-gray-600 text-white top-2 right-8" title="移動"><i class="fas fa-arrows-alt"></i></div>
+                        <div class="img-action bg-red-500 text-white bottom-2 right-2" title="刪除圖片" onclick="event.stopPropagation(); removeEditImage()"><i class="fas fa-trash"></i></div>
+                        <input type="file" id="edit-file-input" class="hidden" accept="image/*" onchange="handleEditFileSelect(event)">
+                    </div>
+                </div>
+
+                <!-- Type-specific fields: PROMO -->
+                <div id="edit-fields-promo" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">主標題</label>
+                            <input type="text" placeholder="例：全站年度大促" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">浮水印文字</label>
+                            <input type="text" placeholder="例：SALE" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5 font-medium">副標題</label>
+                        <input type="text" placeholder="例：精選遊戲最高 8 折優惠" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">按鈕文字</label>
+                            <input type="text" placeholder="例：立即選購" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">按鈕連結</label>
+                            <input type="url" placeholder="https://..." class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5 font-medium">背景色</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" value="#d13639" class="w-10 h-10 border border-[#252545] rounded cursor-pointer bg-transparent">
+                            <span class="text-xs text-gray-500">起始</span>
+                            <i class="fas fa-arrow-right text-gray-600 text-xs"></i>
+                            <input type="color" value="#8a1c1e" class="w-10 h-10 border border-[#252545] rounded cursor-pointer bg-transparent">
+                            <span class="text-xs text-gray-500">結束</span>
+                            <div class="ml-4 flex-1 h-8 rounded" style="background: linear-gradient(to right, #d13639, #8a1c1e);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Type-specific fields: MID ADS -->
+                <div id="edit-fields-midAds" class="space-y-4 hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">廣告標題</label>
+                            <input type="text" placeholder="例：電競周邊特賣" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">標籤類型</label>
+                            <select class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                                <option>廣告</option><option>合作夥伴</option><option>獨家</option><option>自訂...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5 font-medium">點擊連結</label>
+                        <input type="url" placeholder="https://..." class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                    </div>
+                </div>
+
+                <!-- Type-specific fields: SIDEBAR ADS -->
+                <div id="edit-fields-sidebarAds" class="space-y-4 hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">廣告標題</label>
+                            <input type="text" placeholder="例：獨家合作夥伴" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">副標題</label>
+                            <input type="text" placeholder="例：廣告版位招租中" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">按鈕文字（選填）</label>
+                            <input type="text" placeholder="例：瞭解更多" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1.5 font-medium">按鈕連結</label>
+                            <input type="url" placeholder="https://..." class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5 font-medium">背景色</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" value="#d13639" class="w-10 h-10 border border-[#252545] rounded cursor-pointer bg-transparent">
+                            <span class="text-xs text-gray-500">起始</span>
+                            <i class="fas fa-arrow-right text-gray-600 text-xs"></i>
+                            <input type="color" value="#000000" class="w-10 h-10 border border-[#252545] rounded cursor-pointer bg-transparent">
+                            <span class="text-xs text-gray-500">結束</span>
+                            <div class="ml-4 flex-1 h-8 rounded" style="background: linear-gradient(to bottom right, #d13639, #000);"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- Schedule Section -->
+            <div class="edit-section mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-white">開放排程設定</h3>
+                    <span class="badge-active" id="schedule-badge">進行中</span>
+                </div>
+                <p class="text-[11px] text-gray-500 mb-4" id="schedule-note">當前時間在排程範圍內，正在進行中</p>
+
+                <div class="mb-4">
+                    <span class="text-xs text-gray-500">創建時間</span>
+                    <div class="text-sm text-gray-300 mt-0.5">2026/02/09 18:27:47</div>
+                </div>
+
+                <!-- Draft option -->
+                <div class="flex items-center gap-3 mb-5 p-3 bg-[#0e0e1a] rounded">
+                    <input type="radio" name="schedule-mode" id="mode-draft" class="accent-[#7c3aed]">
+                    <label for="mode-draft" class="text-sm text-gray-300 font-medium cursor-pointer">不開放（存成草稿）</label>
+                </div>
+
+                <!-- Schedule times -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5 font-medium">上架時間</label>
+                        <input type="datetime-local" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded" value="2026-03-01T00:00">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1.5 font-medium">下架時間</label>
+                        <input type="datetime-local" class="w-full bg-[#1a1a30] border border-[#252545] text-white text-sm px-4 py-2.5 rounded" value="2026-03-31T23:59">
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Save / Back buttons -->
+            <div class="flex items-center justify-between">
+                <button class="top-btn top-btn-outline" onclick="closeEdit()"><i class="fas fa-arrow-left mr-2 text-xs"></i>返回列表</button>
+                <div class="flex items-center gap-3">
+                    <button class="top-btn top-btn-outline" onclick="closeEdit()">取消</button>
+                    <button class="top-btn top-btn-primary" onclick="saveEdit()"><i class="fas fa-save mr-2 text-xs"></i>儲存</button>
+                </div>
+            </div>
+
+        </div>
+        <!-- END EDIT VIEW -->
+
+
+    </main>
+</div>
+
+
+<!-- ========== DELETE CONFIRM DIALOG ========== -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden" id="modal-delete" onclick="if(event.target===this)closeDeleteDialog()">
+    <div class="bg-[#141428] border border-[#252545] rounded-lg w-full max-w-sm shadow-2xl p-6 text-center">
+        <div class="w-14 h-14 mx-auto mb-4 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center">
+            <i class="fas fa-trash text-red-400 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2">確認軟刪除</h3>
+        <p class="text-sm text-gray-400 mb-6">
+            確定要軟刪除<br>
+            <span class="text-white font-bold" id="delete-name">「」</span>嗎？
+        </p>
+        <p class="text-[11px] text-gray-600 mb-6">資料將標記為已刪除，可由管理員復原。</p>
+        <div class="flex gap-3">
+            <button class="flex-1 bg-[#252545] text-gray-300 py-2.5 text-sm font-bold rounded hover:bg-[#353560] transition-colors" onclick="closeDeleteDialog()">取消</button>
+            <button class="flex-1 bg-red-600 text-white py-2.5 text-sm font-bold rounded hover:bg-red-700 transition-colors" onclick="confirmDelete()">確認刪除</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ========== TOAST ========== -->
+<div class="fixed bottom-6 right-6 z-[70] space-y-3" id="toast-container"></div>
+
+
+<!-- ========== JAVASCRIPT ========== -->
+<script>
+    let currentPage = 'promo';
+
+    const pageConfig = {
+        promo:      { label: '促銷橫幅', total: 1 },
+        midAds:     { label: '中段廣告', total: 6 },
+        sidebarAds: { label: '側邊廣告', total: 2 }
+    };
+
+
+    // ===== SIDEBAR NAV TOGGLE =====
+    function toggleNav(header) {
+        header.closest('.nav-section').classList.toggle('open');
+    }
+
+
+    // ===== TAB SWITCHING =====
+    function switchTab(tab) {
+        currentPage = tab;
+        const cfg = pageConfig[tab];
+
+        // Update page tabs
+        document.querySelectorAll('.page-tab').forEach(el => {
+            const isActive = el.dataset.tab === tab;
+            el.classList.toggle('active', isActive);
+            if (!isActive) {
+                el.classList.add('text-gray-500', 'border-transparent');
+            } else {
+                el.classList.remove('text-gray-500', 'border-transparent');
+            }
+            // Update count badge color
+            const badge = el.querySelector('span[class*="rounded-full"]');
+            if (badge) {
+                badge.className = isActive
+                    ? 'ml-1.5 text-[10px] bg-[#d13639] text-white px-1.5 py-0.5 rounded-full font-bold'
+                    : 'ml-1.5 text-[10px] bg-[#333] text-gray-400 px-1.5 py-0.5 rounded-full font-bold';
+            }
+        });
+
+        // Show/hide tables
+        document.querySelectorAll('.page-table').forEach(t => {
+            t.classList.toggle('hidden', t.dataset.page !== tab);
+        });
+
+        // Show/hide group rotation panel (mid ads only)
+        document.getElementById('group-rotation-panel').classList.toggle('hidden', tab !== 'midAds');
+
+        // Update counts
+        document.getElementById('total-count').textContent = cfg.total;
+        document.getElementById('current-count').textContent = cfg.total;
+
+        // Ensure list view is shown
+        document.getElementById('view-list').classList.remove('hidden');
+        document.getElementById('view-edit').classList.add('hidden');
+    }
+
+    // Sidebar click just ensures we're on list view
+    function switchPage() {
+        document.getElementById('view-list').classList.remove('hidden');
+        document.getElementById('view-edit').classList.add('hidden');
+        document.getElementById('main-content').scrollTop = 0;
+    }
+
+
+    // ===== OPEN EDIT VIEW =====
+    function openEdit(mode) {
+        const cfg = pageConfig[currentPage];
+        const isAdd = mode === 'add';
+
+        // Update breadcrumbs
+        document.getElementById('edit-breadcrumb-parent').textContent = '廣告區塊';
+        document.getElementById('edit-breadcrumb-current').textContent =
+            isAdd ? `新建${cfg.label}` : `編輯${cfg.label}`;
+        document.getElementById('edit-title').textContent =
+            cfg.label + (isAdd ? '_新建頁' : '_編輯頁');
+        document.getElementById('edit-section-label').textContent = cfg.label;
+
+        // Show/hide type-specific fields
+        document.getElementById('edit-fields-promo').classList.toggle('hidden', currentPage !== 'promo');
+        document.getElementById('edit-fields-midAds').classList.toggle('hidden', currentPage !== 'midAds');
+        document.getElementById('edit-fields-sidebarAds').classList.toggle('hidden', currentPage !== 'sidebarAds');
+
+        // Toggle views
+        document.getElementById('view-list').classList.add('hidden');
+        document.getElementById('view-edit').classList.remove('hidden');
+
+        // Scroll to top
+        document.getElementById('main-content').scrollTop = 0;
+    }
+
+
+    // ===== CLOSE EDIT VIEW =====
+    function closeEdit() {
+        document.getElementById('view-list').classList.remove('hidden');
+        document.getElementById('view-edit').classList.add('hidden');
+        document.getElementById('main-content').scrollTop = 0;
+    }
+
+
+    // ===== SAVE EDIT =====
+    function saveEdit() {
+        closeEdit();
+        showToast('資料已儲存！', 'success');
+    }
+
+
+    // ===== LANGUAGE TAB =====
+    function switchLang(tab) {
+        document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+    }
+
+
+    // ===== IMAGE UPLOAD =====
+    function handleEditFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('edit-img-preview').src = ev.target.result;
+            document.getElementById('edit-img-preview').classList.remove('hidden');
+            document.getElementById('edit-img-placeholder').classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeEditImage() {
+        document.getElementById('edit-img-preview').classList.add('hidden');
+        document.getElementById('edit-img-placeholder').classList.remove('hidden');
+        document.getElementById('edit-file-input').value = '';
+    }
+
+
+    // ===== DELETE DIALOG =====
+    function openDeleteDialog(name) {
+        document.getElementById('delete-name').textContent = `「${name}」`;
+        document.getElementById('modal-delete').classList.remove('hidden');
+    }
+
+    function closeDeleteDialog() {
+        document.getElementById('modal-delete').classList.add('hidden');
+    }
+
+    function confirmDelete() {
+        closeDeleteDialog();
+        showToast('資料已標記為軟刪除。', 'warning');
+    }
+
+
+    // ===== TOAST =====
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const colors = {
+            success: 'border-l-green-500 text-green-400',
+            warning: 'border-l-yellow-500 text-yellow-400',
+            error:   'border-l-red-500 text-red-400'
+        };
+        const icons = {
+            success: 'fa-check-circle',
+            warning: 'fa-exclamation-circle',
+            error:   'fa-times-circle'
+        };
+        const toast = document.createElement('div');
+        toast.className = `toast-item bg-[#141428] border border-[#252545] border-l-4 ${colors[type]} rounded px-5 py-3 shadow-lg flex items-center gap-3 text-sm`;
+        toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+
+    // ===== INIT: set default language tab =====
+    document.querySelector('.lang-tab[data-lang="tc"]').click();
+
+
+    // ===== GROUP DRAG & DROP =====
+    let draggedCard = null;
+
+    function dragCard(e) {
+        draggedCard = e.target.closest('.group-card');
+        draggedCard.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedCard.dataset.id);
+    }
+
+    function dropToGroup(e, targetGroup) {
+        e.preventDefault();
+        const zone = e.currentTarget;
+        zone.classList.remove('bg-[#0ff]/5', 'bg-[#bc13fe]/5');
+
+        if (!draggedCard) return;
+        draggedCard.classList.remove('dragging');
+
+        // Check if already in this group
+        if (draggedCard.parentElement === zone) { draggedCard = null; return; }
+
+        const sourceZone = draggedCard.parentElement;
+
+        // If target group is full (3), auto-swap: last card goes to source group as #1
+        const targetCards = zone.querySelectorAll('.group-card');
+        if (targetCards.length >= 3) {
+            const lastCard = targetCards[targetCards.length - 1];
+            sourceZone.insertBefore(lastCard, sourceZone.firstElementChild);
+        }
+
+        // Move dragged card to target group
+        zone.appendChild(draggedCard);
+        updateGroupNumbers();
+        updateGroupCounts();
+        showToast(`已移動至 Group ${targetGroup}`, 'success');
+        draggedCard = null;
+    }
+
+    function updateGroupCounts() {
+        const aCount = document.querySelectorAll('#group-a-zone .group-card').length;
+        const bCount = document.querySelectorAll('#group-b-zone .group-card').length;
+        document.getElementById('group-a-count').textContent = aCount + ' 筆';
+        document.getElementById('group-b-count').textContent = bCount + ' 筆';
+    }
+
+    function updateGroupNumbers() {
+        ['group-a-zone', 'group-b-zone'].forEach(zoneId => {
+            const isA = zoneId === 'group-a-zone';
+            const cards = document.getElementById(zoneId).querySelectorAll('.group-card');
+            cards.forEach((card, i) => {
+                const numEl = card.querySelector('.sort-num');
+                if (numEl) numEl.textContent = i + 1;
+                // Update move button label
+                const moveBtn = card.querySelector('.move-btn');
+                if (moveBtn) moveBtn.innerHTML = isA
+                    ? '<i class="fas fa-arrow-right text-[8px]"></i>移至 B'
+                    : '<i class="fas fa-arrow-left text-[8px]"></i>移至 A';
+            });
+        });
+    }
+
+    // ===== BUTTON-BASED MOVE & REORDER =====
+    function moveToOtherGroup(btn) {
+        const card = btn.closest('.group-card');
+        if (!card) return;
+        const currentZone = card.parentElement;
+        const isInA = currentZone.id === 'group-a-zone';
+        const targetZone = document.getElementById(isInA ? 'group-b-zone' : 'group-a-zone');
+
+        // Auto-swap if target is full (3)
+        const targetCards = targetZone.querySelectorAll('.group-card');
+        if (targetCards.length >= 3) {
+            const lastCard = targetCards[targetCards.length - 1];
+            currentZone.insertBefore(lastCard, currentZone.firstElementChild);
+        }
+
+        targetZone.appendChild(card);
+        updateGroupNumbers();
+        updateGroupCounts();
+        showToast(`已移動至 Group ${isInA ? 'B' : 'A'}`, 'success');
+    }
+
+    function moveCardUp(btn) {
+        const card = btn.closest('.group-card');
+        const prev = card.previousElementSibling;
+        if (prev && prev.classList.contains('group-card')) {
+            card.parentElement.insertBefore(card, prev);
+            updateGroupNumbers();
+        }
+    }
+
+    function moveCardDown(btn) {
+        const card = btn.closest('.group-card');
+        const next = card.nextElementSibling;
+        if (next && next.classList.contains('group-card')) {
+            card.parentElement.insertBefore(next, card);
+            updateGroupNumbers();
+        }
+    }
+
+    // Clean up drag state if dropped outside
+    document.addEventListener('dragend', function() {
+        if (draggedCard) {
+            draggedCard.classList.remove('dragging');
+            draggedCard = null;
+        }
+        document.getElementById('group-a-zone').classList.remove('bg-[#0ff]/5');
+        document.getElementById('group-b-zone').classList.remove('bg-[#bc13fe]/5');
+    });
+</script>
+
+</body>
+</html>

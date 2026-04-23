@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>情報站 Desktop</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: #F2F2F2;
+    color: #1a1a1a;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #1a1a1a;
+    color: #fff;
+    text-align: center;
+    padding: 18px;
+    font-size: 15px;
+    letter-spacing: 2px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  /* ── Hero Banner ── */
+  .hero {
+    background: linear-gradient(135deg, #2BBFBF 0%, #1A9B9B 100%);
+    text-align: center;
+    padding: 40px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30px; left: -30px;
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .hero-scene {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+  }
+
+  .hero-title {
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 8px;
+  }
+
+  /* ── Page Layout ── */
+  .page-body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  /* ── Left Sidebar (Filter) ── */
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 58px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    display: flex;
+    max-height: calc(100vh - 58px - 64px);
+    overflow: hidden;
+  }
+
+  /* 遊戲欄 */
+  .sidebar-games {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-games-header {
+    padding: 16px 14px 10px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-games-scroll {
+    overflow-y: auto;
+    padding: 0 14px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: #eee transparent;
+  }
+
+  .sidebar-games-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .sidebar-games-scroll::-webkit-scrollbar-thumb {
+    background: #eee;
+    border-radius: 4px;
+  }
+
+  /* 類型欄 */
+  .sidebar-types {
+    width: 100px;
+    flex-shrink: 0;
+    border-left: 1px solid #F0F0F0;
+    padding: 16px 10px;
+    overflow-y: auto;
+  }
+
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #bbb;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  /* 遊戲列表 */
+  .game-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .game-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .game-list-item:hover {
+    background: #F7F7F7;
+  }
+
+  .game-list-item.active {
+    background: #FFF5E6;
+  }
+
+  .game-list-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .game-list-avatar.all {
+    background: #F5A623;
+  }
+
+  .game-list-item.active .game-list-avatar {
+    box-shadow: 0 0 0 2px #F5A623;
+  }
+
+  .game-list-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  .game-list-item.active .game-list-name {
+    color: #F5A623;
+  }
+
+  /* 類型列表 */
+  .type-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .type-list-item {
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .type-list-item:hover {
+    background: #F7F7F7;
+    color: #555;
+  }
+
+  .type-list-item.active {
+    background: #FFF5E6;
+    color: #F5A623;
+  }
+
+  /* ── Right Content ── */
+  .content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .breadcrumb {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 20px;
+  }
+
+  .breadcrumb span { color: #555; }
+
+  /* ── Card List ── */
+  .card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .news-card {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: flex;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .news-card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+  }
+
+  /* 圖片：左側固定寬 */
+  .card-image {
+    width: 280px;
+    flex-shrink: 0;
+    background: #D8D8D8;
+    position: relative;
+  }
+
+  /* 文字區：右側 */
+  .card-body {
+    flex: 1;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .card-game-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .card-game-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: #ccc;
+    flex-shrink: 0;
+  }
+
+  .card-game-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.45;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-desc {
+    font-size: 14px;
+    color: #888;
+    line-height: 1.65;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-time {
+    font-size: 12px;
+    color: #bbb;
+  }
+
+  .card-type-badge {
+    background: #FFF0D6;
+    color: #F5A623;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* ── Load More ── */
+  .load-more {
+    text-align: center;
+    padding: 28px 0 8px;
+  }
+
+  .load-more-btn {
+    background: none;
+    border: 1.5px solid #ddd;
+    border-radius: 24px;
+    padding: 11px 48px;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    font-weight: 600;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .load-more-btn:hover {
+    border-color: #F5A623;
+    color: #F5A623;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    background: #1a1a1a;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">Header</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-scene">場景</div>
+  <div class="hero-title">情報站</div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+
+  <!-- Left Sidebar -->
+  <aside class="sidebar">
+
+    <!-- 遊戲欄（可獨立捲動） -->
+    <div class="sidebar-games">
+      <div class="sidebar-games-header">
+        <div class="sidebar-label">遊戲</div>
+      </div>
+      <div class="sidebar-games-scroll">
+        <div class="game-list">
+          <div class="game-list-item active">
+            <div class="game-list-avatar all">全</div>
+            <span class="game-list-name">全部</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#81C784;"></div>
+            <span class="game-list-name">PlayHorny</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#64B5F6;"></div>
+            <span class="game-list-name">遊戲名稱1</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#F48FB1;"></div>
+            <span class="game-list-name">遊戲名稱2</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#FFD54F;"></div>
+            <span class="game-list-name">遊戲名稱3</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#CE93D8;"></div>
+            <span class="game-list-name">遊戲名稱4</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#4DD0E1;"></div>
+            <span class="game-list-name">遊戲名稱5</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#FFAB91;"></div>
+            <span class="game-list-name">遊戲名稱6</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#A5D6A7;"></div>
+            <span class="game-list-name">遊戲名稱7</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#90CAF9;"></div>
+            <span class="game-list-name">遊戲名稱8</span>
+          </div>
+          <div class="game-list-item">
+            <div class="game-list-avatar" style="background:#B0BEC5;"></div>
+            <span class="game-list-name">遊戲名稱9</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 類型欄（固定，不被擠下去） -->
+    <div class="sidebar-types">
+      <div class="sidebar-label">類型</div>
+      <div class="type-list">
+        <div class="type-list-item active">全部</div>
+        <div class="type-list-item">活動</div>
+        <div class="type-list-item">維護</div>
+        <div class="type-list-item">更新</div>
+        <div class="type-list-item">預約</div>
+        <div class="type-list-item">攻略</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Right Content -->
+  <div class="content">
+
+    <div class="breadcrumb">首頁 &gt; <span>情報站</span></div>
+
+    <div class="card-list">
+
+      <div class="news-card">
+        <div class="card-image"></div>
+        <div class="card-body">
+          <div>
+            <div class="card-game-info">
+              
+              <span class="card-game-name">遊戲名稱</span>
+            </div>
+            <div class="card-title">標題標題標題標題標題標題標題標題標題標題標題標題標題標題</div>
+            <div class="card-desc">簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介</div>
+          </div>
+          <div class="card-footer">
+            <span class="card-time">2026-04-17 10:00</span>
+            <span class="card-type-badge">活動</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="news-card">
+        <div class="card-image"></div>
+        <div class="card-body">
+          <div>
+            <div class="card-game-info">
+              
+              <span class="card-game-name">遊戲名稱</span>
+            </div>
+            <div class="card-title">標題標題標題標題標題標題標題標題標題標題標題標題標題標題</div>
+            <div class="card-desc">簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介</div>
+          </div>
+          <div class="card-footer">
+            <span class="card-time">2026-04-16 15:30</span>
+            <span class="card-type-badge">更新</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="news-card">
+        <div class="card-image"></div>
+        <div class="card-body">
+          <div>
+            <div class="card-game-info">
+              
+              <span class="card-game-name">遊戲名稱</span>
+            </div>
+            <div class="card-title">標題標題標題標題標題標題標題標題標題標題標題標題標題標題</div>
+            <div class="card-desc">簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介簡介</div>
+          </div>
+          <div class="card-footer">
+            <span class="card-time">2026-04-15 09:00</span>
+            <span class="card-type-badge">預約</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="load-more">
+      <button class="load-more-btn">載入更多</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">footer</div>
+
+<script>
+  document.querySelectorAll('.game-list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.game-list-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.type-list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.type-list-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

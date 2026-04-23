@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時間修復師 | Time Repairer</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1510; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; font-family: 'Georgia', 'Microsoft JhengHei', serif; }
+        #game-container { position: relative; width: 1024px; height: 768px; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<div id="game-container"></div>
+<script>
+// ============================================================
+//  時間修復師 - Time Repairer (Enhanced Edition)
+//  風格參考: Cube Escape · Storyteller · Moncage
+// ============================================================
+
+// ═══════════════════════════════════════════
+//  SECTION 1: 常數與設定
+// ═══════════════════════════════════════════
+const W = 1024, H = 768;
+const TILE_W = 64, TILE_H = 32;
+const COLS = 14, ROWS = 14;
+const SPD = 110, INTERACT_R = 2.8;
+const PAPER_WARM = '#e8d5b0', PAPER_DARK = '#c4a97d', INK = '#2c1810', INK_LIGHT = '#5c4033';
+const GOLD = '#c9a84c', GOLD_HEX = 0xc9a84c, GLOW_BLUE = '#6fa8c7', GLOW_BLUE_HEX = 0x6fa8c7;
+
+const gameState = { currentLevel: 0, collected: [], completedLevels: [] };
+
+// ═══════════════════════════════════════════
+//  SECTION 2: 音效管理器
+// ═══════════════════════════════════════════
+class AudioManager {
+    constructor() {
+        this.ctx = null; this.master = null; this.ambientOscs = []; this.ready = false;
+    }
+    init() {
+        if (this.ready) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.25;
+            this.master.connect(this.ctx.destination);
+            this.ready = true;
+        } catch(e) { console.warn('Audio not available'); }
+    }
+    tone(freq, dur, type = 'sine', vol = 0.1) {
+        if (!this.ready) return;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type; o.frequency.value = freq;
+        g.gain.setValueAtTime(vol, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+        o.connect(g); g.connect(this.master); o.start(); o.stop(this.ctx.currentTime + dur);
+    }
+    collect() { this.tone(523,.1); setTimeout(()=>this.tone(659,.1),80); setTimeout(()=>this.tone(784,.15),160); }
+    success() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,.3),i*120)); }
+    error() { this.tone(185,.25,'sawtooth',.04); setTimeout(()=>this.tone(165,.3,'sawtooth',.03),100); }
+    click() { this.tone(800,.04,'square',.03); }
+    page() { this.tone(300,.06,'triangle',.05); this.tone(600,.04,'triangle',.02); }
+    rift() { this.tone(110,.8,'sine',.06); this.tone(165,.8,'sine',.04); this.tone(220,.6,'sine',.03); }
+    startAmbient(level) {
+        this.stopAmbient();
+        if (!this.ready) return;
+        const chords = [
+            [220,277,330],[196,247,294],[175,220,262],[262,330,392]
+        ];
+        const notes = chords[level] || chords[0];
+        notes.forEach(freq => {
+            const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+            o.type = 'sine'; o.frequency.value = freq; g.gain.value = 0.018;
+            o.connect(g); g.connect(this.master); o.start();
+            // Gentle vibrato
+            const lfo = this.ctx.createOscillator(); const lfoG = this.ctx.createGain();
+            lfo.frequency.value = 0.3 + Math.random()*0.4; lfoG.gain.value = 1.5;
+            lfo.connect(lfoG); lfoG.connect(o.frequency); lfo.start();
+            this.ambientOscs.push(o, lfo);
+        });
+    }
+    stopAmbient() {
+        this.ambientOscs.forEach(o => { try { o.stop(); } catch(e){} });
+        this.ambientOscs = [];
+    }
+}
+const audio = new AudioManager();
+
+// ═══════════════════════════════════════════
+//  SECTION 3: 手繪風格繪圖工具
+// ═══════════════════════════════════════════
+function wobblyLine(g, x1, y1, x2, y2, segs = 6, jitter = 1.5) {
+    let px = x1, py = y1;
+    for (let i = 1; i <= segs; i++) {
+        const t = i / segs;
+        const nx = x1 + (x2-x1)*t + (i<segs ? (Math.random()-.5)*jitter*2 : 0);
+        const ny = y1 + (y2-y1)*t + (i<segs ? (Math.random()-.5)*jitter*2 : 0);
+        g.lineBetween(px, py, nx, ny);
+        px = nx; py = ny;
+    }
+}
+function wobblyRect(g, x, y, w, h, jitter = 1.5) {
+    wobblyLine(g, x,y, x+w,y, 4, jitter);
+    wobblyLine(g, x+w,y, x+w,y+h, 4, jitter);
+    wobblyLine(g, x+w,y+h, x,y+h, 4, jitter);
+    wobblyLine(g, x,y+h, x,y, 4, jitter);
+}
+function wobblyCircle(g, cx, cy, r, segs = 16, jitter = 2) {
+    const pts = [];
+    for (let i = 0; i <= segs; i++) {
+        const a = (i/segs)*Math.PI*2;
+        const rr = r + (Math.random()-.5)*jitter*2;
+        pts.push({ x: cx+Math.cos(a)*rr, y: cy+Math.sin(a)*rr });
+    }
+    for (let i = 0; i < pts.length-1; i++) g.lineBetween(pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y);
+}
+function drawInkBorder(g, x, y, w, h, color = 0x2c1810) {
+    g.lineStyle(2, color, 0.7);
+    wobblyRect(g, x, y, w, h, 2);
+    g.lineStyle(1, color, 0.3);
+    wobblyRect(g, x-3, y-3, w+6, h+6, 3);
+}
+
+// 等角座標
+function toIso(cx, cy) { return { x:(cx-cy)*(TILE_W/2), y:(cx+cy)*(TILE_H/2) }; }
+function fromIso(ix, iy) { return { x:(ix/(TILE_W/2)+iy/(TILE_H/2))/2, y:(iy/(TILE_H/2)-ix/(TILE_W/2))/2 }; }
+
+// ═══════════════════════════════════════════
+//  SECTION 4: 關卡資料
+// ═══════════════════════════════════════════
+const LEVELS = [
+{
+    name:'伊甸園', sub:'Garden of Eden',
+    desc:'美麗的花園中，生命樹與知識樹並立。\n神賜予人類一切，唯獨禁止觸碰那棵樹...',
+    colors:{ ground:0x3d6b4f, grass:0x4d8b5f, water:0x4a9ebc, stone:0x8a8a7a, accent:0xc9a84c },
+    bg:'#1a2e1f',
+    turningPoint:'墮落 — 人類選擇違背誡命，吃了禁果',
+    summary:'亞當與夏娃在伊甸園中受蛇引誘，違背了神的誡命，吃下知識樹的果實。\n他們失去了純真，被逐出伊甸園。這是「原罪」的起源——自由意志的代價。',
+    narrator:{
+        enter:'你踏入了伊甸園。空氣中瀰漫著花果的芬芳，四條河流環繞著這片樂土...',
+        first:'你找到了第一條線索。歷史的碎片正在向你訴說...',
+        allFound:'所有證據已蒐集完畢。是時候在因果舞台上還原真相了...',
+        rift:'你感受到時間的裂隙...前方隱約浮現兄弟相爭的陰影...'
+    },
+    interactions:[
+        { id:'scroll',emoji:'📜',name:'神的誡命',tileX:4,tileY:3,prereq:null,
+          closeupBg:'stone',closeupTitle:'刻有文字的石碑',
+          closeupHint:'點擊石碑閱讀誡命',
+          revealText:'「園中各樣樹上的果子，你可以隨意吃，\n只是知識樹上的果子，你不可吃，\n因為你吃的日子必定死。」',
+          desc:'神在園中立下的第一條誡命，自由的邊界。' },
+        { id:'snake',emoji:'🐍',name:'蛇的低語',tileX:11,tileY:5,prereq:null,
+          closeupBg:'bush',closeupTitle:'灌木叢中的窸窣聲',
+          closeupHint:'撥開樹葉看看...',
+          revealText:'「你們不一定死。你們吃的日子眼睛就明亮了，\n你們便如神能知道善惡。」',
+          desc:'蛇是田野中最狡猾的。牠的話語，是誘惑的起點。' },
+        { id:'fruit',emoji:'🍎',name:'禁果',tileX:8,tileY:7,prereq:'snake',
+          closeupBg:'tree',closeupTitle:'知識樹',
+          closeupHint:'樹上有一顆散發光芒的果實...',
+          revealText:'那果子好作食物，也悅人的眼目，\n且是可喜愛的，能使人有智慧。\n於是她摘下果子來吃了，又給她丈夫，他也吃了。',
+          desc:'一顆果實，改變了全人類的命運。' },
+        { id:'leaf',emoji:'🍃',name:'無花果葉',tileX:5,tileY:11,prereq:'fruit',
+          closeupBg:'ground',closeupTitle:'地上散落的樹葉',
+          closeupHint:'這些葉子似乎被人用過...',
+          revealText:'他們二人的眼睛就明亮了，才知道自己是赤身露體，\n便拿無花果樹的葉子為自己編做裙子。',
+          desc:'知道善惡之後，第一個反應是羞恥。純真已逝。' },
+        { id:'gate',emoji:'🚪',name:'東門',tileX:12,tileY:9,prereq:'leaf',
+          closeupBg:'gate',closeupTitle:'伊甸園的東門',
+          closeupHint:'門外有火焰在旋轉...',
+          revealText:'神將人趕出去了，又在伊甸園的東邊\n安設基路伯和四面轉動發火焰的劍，\n要把守生命樹的道路。',
+          desc:'回不去的樂園。人類的旅程，從這扇門開始。' }
+    ],
+    stage:{
+        acts:[
+            { title:'第一幕：誡命', slots:['scroll'], color:0x2d5a16,
+              text:'起初，神在園中立下誡命，\n為人類劃定了自由的邊界...',
+              anim:{ emoji:'📜', motion:'unfold' }},
+            { title:'第二幕：誘惑', slots:['snake','fruit'], color:0x1a3a10,
+              text:'蛇引誘夏娃，她伸手摘下了那顆禁果...',
+              anim:{ emoji:'🐍🍎', motion:'tempt' }},
+            { title:'第三幕：墮落', slots:['leaf','gate'], color:0x1a1a10,
+              text:'純真破碎，人類被逐出樂園，\n通往生命樹的道路永遠關閉了。',
+              anim:{ emoji:'🍃🔥', motion:'expel' }}
+        ]
+    },
+    rift:{ tileX:10, tileY:2, preview:'伊甸之東', previewEmoji:'🩸', hint:'血的代價...' },
+    map:[
+        [1,1,0,0,0,0,2,2,0,0,0,0,1,1],
+        [1,0,0,4,0,0,2,2,0,0,4,0,0,1],
+        [0,0,4,0,0,0,0,0,0,0,0,0,4,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,4,0,1,1,0,0,0,0,1,1,0,4,0],
+        [0,0,0,1,0,0,0,0,0,0,1,0,0,0],
+        [0,0,0,0,0,0,5,0,0,0,0,0,0,0],
+        [2,2,0,0,0,0,0,0,0,0,0,0,2,2],
+        [2,2,0,0,0,0,0,0,0,0,0,0,2,2],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,1,0,0,0,0,0,0,1,0,0,0],
+        [0,4,0,1,1,0,0,0,0,1,1,0,4,0],
+        [0,0,4,0,0,0,0,0,0,0,0,0,4,0],
+        [1,1,0,0,0,0,0,0,0,0,0,0,1,1]
+    ],
+    trees:[{x:3,y:1},{x:10,y:1},{x:1,y:5},{x:12,y:5},{x:7,y:6},{x:1,y:9},{x:12,y:9},{x:3,y:12},{x:10,y:12}],
+    playerStart:{x:7,y:11}
+},
+{
+    name:'伊甸之東', sub:'East of Eden',
+    desc:'被逐出樂園後，人類在荒野中開始新生活。\n該隱務農，亞伯牧羊，兩兄弟各自向神獻祭...',
+    colors:{ ground:0x7a6322, grass:0x8a7332, water:0x5a6352, stone:0x6a5a42, accent:0xb34040 },
+    bg:'#221a0a',
+    turningPoint:'第一次殺人 — 嫉妒導致兄弟相殘',
+    summary:'該隱與亞伯各自向神獻祭，神只悅納了亞伯的羊羔。\n嫉妒蒙蔽了該隱的心，他在田間殺害了弟弟亞伯。\n地開了口接收亞伯的血——這是人類史上第一起謀殺。',
+    narrator:{
+        enter:'你來到了伊甸之東。荒涼的大地上，兩座祭壇遙遙相望...',
+        first:'一條線索浮現了。嫉妒的種子已經埋下...',
+        allFound:'真相的碎片已經齊全。讓我們還原這場悲劇...',
+        rift:'時間的裂隙中，你看見一個更黑暗的未來——全地充滿敗壞...'
+    },
+    interactions:[
+        { id:'grain',emoji:'🌾',name:'該隱的穀物祭品',tileX:3,tileY:5,prereq:null,
+          closeupBg:'altar',closeupTitle:'左邊的祭壇',closeupHint:'祭壇上堆滿了穀物...',
+          revealText:'該隱拿地裡的出產為供物獻給耶和華。\n然而，天上沒有火降下。',
+          desc:'該隱辛勞的成果，卻未被看中。' },
+        { id:'lamb',emoji:'🐑',name:'亞伯的羊羔祭品',tileX:10,tileY:5,prereq:null,
+          closeupBg:'altar',closeupTitle:'右邊的祭壇',closeupHint:'一隻純白的羊羔靜靜躺著...',
+          revealText:'亞伯將他羊群中頭生的和羊的脂油獻上。\n耶和華看中了亞伯和他的供物。',
+          desc:'被揀選的祭物。偏愛，是悲劇的序幕。' },
+        { id:'fire',emoji:'🔥',name:'天火',tileX:10,tileY:3,prereq:'lamb',
+          closeupBg:'sky',closeupTitle:'天空',closeupHint:'一道光柱從天而降...',
+          revealText:'天火只降在亞伯的祭壇上，\n照亮了一邊，也在另一邊投下了陰影。',
+          desc:'神的偏愛如火，也點燃了嫉妒的怒火。' },
+        { id:'anger',emoji:'😠',name:'該隱的怒容',tileX:6,tileY:8,prereq:'fire',
+          closeupBg:'face',closeupTitle:'該隱的面容',closeupHint:'他的表情扭曲了...',
+          revealText:'該隱就大大地發怒，變了臉色。\n耶和華對他說：「你為什麼發怒？\n你若行得好，豈不蒙悅納？」',
+          desc:'怒火在心中燃燒，神的警告被無視了。' },
+        { id:'blood',emoji:'🩸',name:'地上的血跡',tileX:7,tileY:11,prereq:'anger',
+          closeupBg:'ground',closeupTitle:'田間的泥土',closeupHint:'泥土的顏色不太對勁...',
+          revealText:'該隱起來打他兄弟亞伯，把他殺了。\n耶和華說：「你兄弟的血有聲音從地裡向我哀告。」',
+          desc:'第一滴人血染紅了大地。罪，從此揮之不去。' }
+    ],
+    stage:{
+        acts:[
+            { title:'第一幕：獻祭', slots:['grain','lamb'], color:0x5a4a12,
+              text:'兄弟二人各自獻上祭物，\n一個獻穀物，一個獻羊羔...',
+              anim:{ emoji:'🌾🐑', motion:'offering' }},
+            { title:'第二幕：偏愛與嫉妒', slots:['fire','anger'], color:0x4a2a0a,
+              text:'天火降在亞伯的祭壇上，\n該隱的怒火卻在心中燃起...',
+              anim:{ emoji:'🔥😠', motion:'jealousy' }},
+            { title:'第三幕：流血', slots:['blood'], color:0x2a0a0a,
+              text:'該隱在田間殺了他的兄弟亞伯。\n地開了口，從他手裡接收了弟弟的血。',
+              anim:{ emoji:'🩸', motion:'murder' }}
+        ]
+    },
+    rift:{ tileX:2, tileY:3, preview:'墮落的世代', previewEmoji:'👹', hint:'巨人行走於大地...' },
+    map:[
+        [3,3,0,0,0,0,0,0,0,0,0,0,3,3],
+        [3,0,0,0,0,0,0,0,0,0,0,0,0,3],
+        [0,0,0,0,0,0,3,3,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,1,1,1,0,0,0,0,1,1,1,0,0],
+        [0,0,1,0,1,0,0,0,0,1,0,1,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,3,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,1,0,0,0,0,0,0,1,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,3,3,0,0,0,0,0,0],
+        [3,3,0,0,0,0,0,0,0,0,0,0,3,3]
+    ],
+    trees:[{x:1,y:3},{x:5,y:1},{x:8,y:1},{x:12,y:3},{x:0,y:8},{x:13,y:8},{x:1,y:12},{x:12,y:12}],
+    playerStart:{x:7,y:12}
+},
+{
+    name:'墮落的世代', sub:'The Corruption',
+    desc:'人類繁衍生息，卻越來越偏離正道。\n暴力橫行，巨人出沒，大地充滿了敗壞...',
+    colors:{ ground:0x3a3040, grass:0x4a4050, water:0x2a2a42, stone:0x4a4050, accent:0x7a40b0 },
+    bg:'#12101a',
+    turningPoint:'神決定用洪水潔淨世界',
+    summary:'從亞當到諾亞的十代之間，人類的罪惡不斷累積。\n暴力充滿全地，神見人在地上罪惡很大，心中憂傷。\n祂決定用洪水毀滅地上一切——唯獨諾亞在神眼前蒙恩。',
+    narrator:{
+        enter:'一股沉重的氣息籠罩著大地。這是一個墮落的時代...',
+        first:'在混亂中，你找到了第一條線索...',
+        allFound:'審判的全貌已清晰。是時候理解這一切為何發生...',
+        rift:'裂隙中傳來水聲...滔天洪水即將來臨...'
+    },
+    interactions:[
+        { id:'genealogy',emoji:'📋',name:'族譜卷軸',tileX:3,tileY:4,prereq:null,
+          closeupBg:'scroll',closeupTitle:'古老的族譜',closeupHint:'展開這份泛黃的卷軸...',
+          revealText:'塞特的後裔敬畏神，該隱的後裔漸行漸遠。\n兩條血脈，兩種命運，交織出人類的光明與黑暗。',
+          desc:'從亞當到諾亞，十代人的興衰。' },
+        { id:'nephilim',emoji:'👹',name:'拿非利人的腳印',tileX:11,tileY:4,prereq:null,
+          closeupBg:'ground',closeupTitle:'巨大的足跡',closeupHint:'這腳印大得不像人類...',
+          revealText:'那時候有巨人在地上。\n他們是上古英武有名的人，\n但他們的存在本身就是秩序的崩壞。',
+          desc:'超自然的存在——秩序瓦解的證明。' },
+        { id:'violence',emoji:'⚔️',name:'暴力的痕跡',tileX:7,tileY:7,prereq:'nephilim',
+          closeupBg:'ruins',closeupTitle:'破碎的遺跡',closeupHint:'到處都是破壞的痕跡...',
+          revealText:'世界在神面前敗壞，地上滿了強暴。\n凡有血氣的人在地上都敗壞了行為。',
+          desc:'暴力成了日常。文明在自我毀滅。' },
+        { id:'sigh',emoji:'💔',name:'神的嘆息',tileX:5,tileY:10,prereq:'violence',
+          closeupBg:'temple',closeupTitle:'空曠的聖所',closeupHint:'空氣中迴盪著一聲歎息...',
+          revealText:'耶和華見人在地上罪惡很大，\n終日所思想的盡都是惡，\n耶和華就後悔造人在地上，心中憂傷。',
+          desc:'連神也感到了悲傷。審判的時刻到了。' },
+        { id:'cloud',emoji:'🌧️',name:'烏雲的預兆',tileX:10,tileY:11,prereq:'sigh',
+          closeupBg:'sky',closeupTitle:'天空',closeupHint:'雲層變得越來越厚重...',
+          revealText:'神對諾亞說：「凡有血氣的人，他的盡頭已經來到我面前，\n因為地上滿了他們的強暴，我要把他們和地一併毀滅。」',
+          desc:'審判已定。唯一的希望，在一個義人身上。' }
+    ],
+    stage:{
+        acts:[
+            { title:'第一幕：分裂', slots:['genealogy','nephilim'], color:0x2a2040,
+              text:'兩條血脈分道揚鑣，\n巨人的出現標誌著秩序的崩塌...',
+              anim:{ emoji:'📋👹', motion:'divide' }},
+            { title:'第二幕：敗壞', slots:['violence'], color:0x1a1020,
+              text:'暴力充滿全地，\n人心中所想的盡都是惡...',
+              anim:{ emoji:'⚔️', motion:'corrupt' }},
+            { title:'第三幕：審判', slots:['sigh','cloud'], color:0x0a0a15,
+              text:'神心中憂傷，決定用洪水清洗一切。\n烏雲聚集，審判即將降臨...',
+              anim:{ emoji:'💔🌧️', motion:'judge' }}
+        ]
+    },
+    rift:{ tileX:11, tileY:2, preview:'諾亞方舟', previewEmoji:'🕊️', hint:'有人在建造什麼...' },
+    map:[
+        [3,3,3,0,0,0,0,0,0,0,0,3,3,3],
+        [3,0,0,0,0,0,0,0,0,0,0,0,0,3],
+        [3,0,0,0,0,0,0,0,0,0,0,0,0,3],
+        [0,0,0,0,0,0,3,3,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,3,0,0,0,0,3,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,3,0,0,0,0,0,0,0,0,3,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,3,0,0,0,0,3,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,3,3,0,0,0,0,0,0],
+        [3,0,0,0,0,0,0,0,0,0,0,0,0,3],
+        [3,3,3,0,0,0,0,0,0,0,0,3,3,3]
+    ],
+    trees:[{x:1,y:4},{x:12,y:4},{x:3,y:8},{x:10,y:8},{x:1,y:11},{x:12,y:11},{x:7,y:1}],
+    playerStart:{x:7,y:12}
+},
+{
+    name:'諾亞方舟', sub:"Noah's Ark",
+    desc:'在滿是罪惡的世界中，唯有諾亞是義人。\n神指示他建造方舟，迎接即將來臨的大洪水...',
+    colors:{ ground:0x1d4557, grass:0x2a5563, water:0x0a3e7a, stone:0x3a4a5a, accent:0x48cae4 },
+    bg:'#0a1420',
+    turningPoint:'盟約 — 神與人類立下永不再用洪水毀滅的約定',
+    summary:'諾亞遵照神的旨意建造了方舟，大雨下了四十晝夜。\n水退之後，鴿子銜著橄欖葉回來，大地重現。\n神在雲中立起彩虹：「我不再用洪水滅絕一切有血肉的生靈。」\n這是神與全人類的第一個盟約——希望的象徵。',
+    narrator:{
+        enter:'洪水前的世界一片混沌。但有一個人，在神面前站立不搖...',
+        first:'方舟的故事開始顯現...',
+        allFound:'從毀滅到重生，所有的碎片已經就位...',
+        rift:null
+    },
+    interactions:[
+        { id:'blueprint',emoji:'📐',name:'方舟的藍圖',tileX:4,tileY:3,prereq:null,
+          closeupBg:'scroll',closeupTitle:'神的指示',closeupHint:'展開這份建造圖...',
+          revealText:'「你要用歌斐木造一隻方舟，\n長三百肘、寬五十肘、高三十肘。\n裡外抹上松香。」',
+          desc:'一份拯救的藍圖。信仰與服從的考驗。' },
+        { id:'animals',emoji:'🦁',name:'動物配對名冊',tileX:11,tileY:5,prereq:null,
+          closeupBg:'scroll',closeupTitle:'名冊',closeupHint:'上面記載著各種動物...',
+          revealText:'「凡有血肉的活物，每樣兩個，一公一母，\n你要帶進方舟，好保全生命。」',
+          desc:'每一個物種，都值得被保存。生命的名單。' },
+        { id:'rain',emoji:'🌊',name:'四十天的雨',tileX:3,tileY:8,prereq:'animals',
+          closeupBg:'sky',closeupTitle:'天空裂開了',closeupHint:'雨滴越來越大...',
+          revealText:'大淵的泉源都裂開了，天上的窗戶也敞開了。\n四十晝夜降大雨在地上。\n水勢浩大，在地上共一百五十天。',
+          desc:'審判以水的形式降臨。舊世界被沖刷殆盡。' },
+        { id:'dove',emoji:'🕊️',name:'鴿子與橄欖枝',tileX:9,tileY:10,prereq:'rain',
+          closeupBg:'sky',closeupTitle:'放飛的鴿子',closeupHint:'一隻白鴿飛了回來...',
+          revealText:'鴿子回到他那裡，嘴裡叼著一個新擰下來的橄欖葉子。\n諾亞就知道地上的水退了。',
+          desc:'橄欖枝——和平與新生的信號。' },
+        { id:'rainbow',emoji:'🌈',name:'彩虹之約',tileX:7,tileY:12,prereq:'dove',
+          closeupBg:'sky',closeupTitle:'雨後的天空',closeupHint:'天邊出現了從未見過的光...',
+          revealText:'「我把虹放在雲彩中，\n這就可以作我與地立約的記號了。\n水就再不氾濫毀壞一切有血肉的物了。」',
+          desc:'彩虹——神與人類之間永恆的盟約。希望。' }
+    ],
+    stage:{
+        acts:[
+            { title:'第一幕：預備', slots:['blueprint','animals'], color:0x1a3050,
+              text:'諾亞按照神的指示建造方舟，\n帶領動物們兩兩進入其中...',
+              anim:{ emoji:'📐🦁', motion:'build' }},
+            { title:'第二幕：洪水', slots:['rain'], color:0x0a1a30,
+              text:'大雨傾盆四十晝夜，\n洪水淹沒了一切。唯有方舟漂浮於水面...',
+              anim:{ emoji:'🌊', motion:'flood' }},
+            { title:'第三幕：盟約', slots:['dove','rainbow'], color:0x1a3a5a,
+              text:'鴿子銜回橄欖枝，水退了。\n神在雲中設立彩虹，與人類立下永恆的約定。',
+              anim:{ emoji:'🕊️🌈', motion:'covenant' }}
+        ]
+    },
+    rift:null,
+    map:[
+        [2,2,2,0,0,0,0,0,0,0,0,2,2,2],
+        [2,2,0,0,0,0,0,0,0,0,0,0,2,2],
+        [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
+        [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
+        [2,0,0,0,0,0,0,0,0,0,0,0,0,2],
+        [2,2,2,0,0,0,0,0,0,0,0,2,2,2]
+    ],
+    trees:[{x:4,y:3},{x:9,y:3},{x:2,y:7},{x:11,y:7},{x:4,y:10},{x:9,y:10}],
+    playerStart:{x:7,y:7}
+}
+];
+
+// ═══════════════════════════════════════════
+//  SECTION 5: BootScene — 資源生成
+// ═══════════════════════════════════════════
+class BootScene extends Phaser.Scene {
+    constructor() { super('BootScene'); }
+    create() {
+        this.generatePaperTexture();
+        this.generatePlayerTexture();
+        this.generateParticles();
+        this.scene.start('MenuScene');
+    }
+    generatePaperTexture() {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        // 基底羊皮紙色
+        ctx.fillStyle = '#e0d0a8'; ctx.fillRect(0,0,W,H);
+        // 噪點紋理
+        const img = ctx.getImageData(0,0,W,H);
+        for (let i = 0; i < img.data.length; i+=4) {
+            const n = (Math.random()-.5)*30;
+            img.data[i]=Math.min(255,Math.max(0,img.data[i]+n));
+            img.data[i+1]=Math.min(255,Math.max(0,img.data[i+1]+n));
+            img.data[i+2]=Math.min(255,Math.max(0,img.data[i+2]+n));
+        }
+        ctx.putImageData(img,0,0);
+        // 歲月斑點
+        for (let i = 0; i < 12; i++) {
+            ctx.fillStyle = `rgba(139,90,43,${Math.random()*0.07})`;
+            ctx.beginPath(); ctx.arc(Math.random()*W,Math.random()*H,Math.random()*100+30,0,Math.PI*2); ctx.fill();
+        }
+        // 暈影（暗邊）
+        const grad = ctx.createRadialGradient(W/2,H/2,150,W/2,H/2,550);
+        grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.35)');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+        // 邊緣燒焦感
+        ctx.fillStyle = 'rgba(60,30,10,0.15)';
+        ctx.fillRect(0,0,W,8); ctx.fillRect(0,H-8,W,8); ctx.fillRect(0,0,8,H); ctx.fillRect(W-8,0,8,H);
+        this.textures.addCanvas('paper', c);
+        // 暗色紙張（用於 close-up）
+        const c2 = document.createElement('canvas'); c2.width = 500; c2.height = 360;
+        const ctx2 = c2.getContext('2d');
+        ctx2.fillStyle = '#d4c498'; ctx2.fillRect(0,0,500,360);
+        const img2 = ctx2.getImageData(0,0,500,360);
+        for (let i = 0; i < img2.data.length; i+=4) {
+            const n = (Math.random()-.5)*20;
+            img2.data[i]=Math.min(255,Math.max(0,img2.data[i]+n));
+            img2.data[i+1]=Math.min(255,Math.max(0,img2.data[i+1]+n));
+            img2.data[i+2]=Math.min(255,Math.max(0,img2.data[i+2]+n));
+        }
+        ctx2.putImageData(img2,0,0);
+        this.textures.addCanvas('paperDark', c2);
+    }
+    generatePlayerTexture() {
+        const g = this.add.graphics();
+        // 身體（長袍）
+        g.fillStyle(0xd4c090); g.fillEllipse(16,22,12,18);
+        // 頭
+        g.fillStyle(0xe8c9a0); g.fillCircle(16,8,7);
+        // 頭髮
+        g.fillStyle(0x4a3020); g.fillEllipse(16,4,7,4);
+        // 披風
+        g.fillStyle(0x6a4a30); g.fillTriangle(9,15,23,15,16,35);
+        // 時鐘符號
+        g.lineStyle(1.5,GOLD_HEX); g.strokeCircle(16,20,4);
+        g.lineBetween(16,18,16,20); g.lineBetween(16,20,18,21);
+        // 手繪描邊
+        g.lineStyle(1,0x2c1810,0.5);
+        wobblyCircle(g,16,8,7.5,12,1); wobblyCircle(g,16,22,7,10,1);
+        g.generateTexture('player',32,38); g.destroy();
+    }
+    generateParticles() {
+        // 灰塵粒子
+        let g = this.add.graphics();
+        g.fillStyle(0xd4c090,0.6); g.fillCircle(4,4,4);
+        g.generateTexture('dustParticle',8,8); g.destroy();
+        // 發光粒子
+        g = this.add.graphics();
+        g.fillStyle(0xffffff,0.4); g.fillCircle(8,8,8);
+        g.fillStyle(0xffffff,0.8); g.fillCircle(8,8,3);
+        g.generateTexture('glow',16,16); g.destroy();
+        // 火焰粒子
+        g = this.add.graphics();
+        g.fillStyle(0xffaa00); g.fillCircle(4,4,4);
+        g.generateTexture('fireParticle',8,8); g.destroy();
+    }
+}
+
+// ═══════════════════════════════════════════
+//  SECTION 6: MenuScene — 古卷手抄本風格
+// ═══════════════════════════════════════════
+class MenuScene extends Phaser.Scene {
+    constructor() { super('MenuScene'); }
+    create() {
+        this.cameras.main.fadeIn(800,0,0,0);
+        // 紙張背景
+        this.add.image(W/2,H/2,'paper').setDisplaySize(W,H);
+        // 暈影覆蓋
+        const vig = this.add.graphics();
+        vig.fillStyle(0x1a1510,0.3); vig.fillRect(0,0,W,H);
+        // 裝飾邊框
+        const border = this.add.graphics();
+        border.lineStyle(2,0x8a6a3a,0.6);
+        wobblyRect(border,40,30,W-80,H-60,3);
+        border.lineStyle(1,0x8a6a3a,0.3);
+        wobblyRect(border,50,40,W-100,H-80,4);
+        // 角落裝飾
+        this.drawCornerOrnament(border,55,45);
+        this.drawCornerOrnament(border,W-55,45);
+        this.drawCornerOrnament(border,55,H-45);
+        this.drawCornerOrnament(border,W-55,H-45);
+        // 灰塵粒子
+        this.spawnDust();
+        // 齒輪圖案（時間主題）
+        this.drawGear(W/2, H/2-110, 45, 0x8a6a3a, 0.2);
+        // 標題
+        this.add.text(W/2,H/2-130,'時間修復師',{
+            fontSize:'48px',fontFamily:'Georgia, "Microsoft JhengHei", serif',
+            color:INK,stroke:'#c4a97d',strokeThickness:1
+        }).setOrigin(0.5);
+        this.add.text(W/2,H/2-78,'TIME REPAIRER',{
+            fontSize:'14px',fontFamily:'Georgia, serif',
+            color:INK_LIGHT,letterSpacing:6
+        }).setOrigin(0.5);
+        this.add.text(W/2,H/2-50,'— 創世紀篇 —',{
+            fontSize:'18px',fontFamily:'"Microsoft JhengHei", serif',color:INK_LIGHT
+        }).setOrigin(0.5);
+        // 小序言
+        const preface = '「歷史的時間線斷裂了。\n你是被選中的修復師，\n必須找出每個時代的關鍵轉折點，\n才能搭建通往下一世紀的橋樑。」';
+        this.add.text(W/2,H/2+5,preface,{
+            fontSize:'14px',fontFamily:'"Microsoft JhengHei", serif',
+            color:'#5a4a3a',align:'center',lineSpacing:6
+        }).setOrigin(0.5);
+        // 開始按鈕
+        const btnG = this.add.graphics();
+        btnG.lineStyle(1.5,0x8a6a3a,0.8);
+        wobblyRect(btnG,W/2-90,H/2+95,180,42,2);
+        const btn = this.add.rectangle(W/2,H/2+116,180,42,0x000000,0)
+            .setInteractive({useHandCursor:true});
+        const btnTxt = this.add.text(W/2,H/2+116,'翻開歷史之書',{
+            fontSize:'16px',fontFamily:'"Microsoft JhengHei", serif',color:INK
+        }).setOrigin(0.5);
+        btn.on('pointerover',()=>{ btnTxt.setColor(GOLD); });
+        btn.on('pointerout',()=>{ btnTxt.setColor(INK); });
+        btn.on('pointerdown',()=>{
+            audio.init(); audio.page();
+            gameState.currentLevel=0; gameState.collected=[]; gameState.completedLevels=[];
+            this.cameras.main.fadeOut(600,0,0,0);
+            this.time.delayedCall(600,()=>this.scene.start('GameScene',{level:0}));
+        });
+        // 操作說明
+        this.add.text(W/2,H-70,'WASD 移動 · E/點擊 互動 · Tab 時間之書',{
+            fontSize:'11px',color:'#8a7a6a',fontFamily:'"Microsoft JhengHei", serif'
+        }).setOrigin(0.5);
+    }
+    drawCornerOrnament(g,x,y) {
+        g.lineStyle(1,0x8a6a3a,0.4);
+        for (let i=0;i<3;i++) {
+            const a=i*Math.PI/4; const r=8+i*3;
+            g.lineBetween(x,y,x+Math.cos(a)*r,y+Math.sin(a)*r);
+        }
+    }
+    drawGear(x,y,r,color,alpha) {
+        const g=this.add.graphics();
+        g.lineStyle(1.5,color,alpha);
+        wobblyCircle(g,x,y,r,20,2); wobblyCircle(g,x,y,r*0.5,12,1);
+        for(let i=0;i<10;i++){const a=(i/10)*Math.PI*2;
+            wobblyLine(g,x+Math.cos(a)*r*0.5,y+Math.sin(a)*r*0.5,x+Math.cos(a)*r,y+Math.sin(a)*r,3,1);
+        }
+        this.tweens.add({targets:g,angle:360,duration:30000,repeat:-1});
+    }
+    spawnDust() {
+        for(let i=0;i<25;i++){
+            const d=this.add.circle(Phaser.Math.Between(60,W-60),Phaser.Math.Between(50,H-50),
+                Phaser.Math.Between(1,2),0xc4a97d,Phaser.Math.FloatBetween(0.1,0.3));
+            this.tweens.add({targets:d,y:d.y-Phaser.Math.Between(20,60),alpha:0,
+                duration:Phaser.Math.Between(4000,8000),delay:Phaser.Math.Between(0,3000),
+                repeat:-1,yoyo:true});
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+//  SECTION 7: Narrator 旁白系統
+// ═══════════════════════════════════════════
+class Narrator {
+    constructor(scene) {
+        this.scene = scene;
+        this.bg = scene.add.rectangle(W/2,H-35,W-120,44,0x1a1510,0.85)
+            .setStrokeStyle(1,0x8a6a3a,0.4).setDepth(850).setAlpha(0);
+        this.text = scene.add.text(W/2,H-35,'',{
+            fontSize:'13px',fontFamily:'Georgia,"Microsoft JhengHei",serif',
+            color:'#c4b090',align:'center',wordWrap:{width:W-160}
+        }).setOrigin(0.5).setDepth(851).setAlpha(0);
+        this.queue=[]; this.typing=false; this.timer=null;
+    }
+    say(msg,delay=0) {
+        this.queue.push({msg,delay});
+        if(!this.typing) this.next();
+    }
+    next() {
+        if(this.queue.length===0){this.typing=false; this.hide(); return;}
+        this.typing=true;
+        const{msg,delay}=this.queue.shift();
+        this.scene.time.delayedCall(delay,()=>{
+            this.show();
+            let i=0; this.text.setText('');
+            if(this.timer) this.timer.remove();
+            this.timer=this.scene.time.addEvent({delay:40,callback:()=>{
+                this.text.setText(msg.substring(0,++i));
+                if(i>=msg.length){
+                    this.timer.remove();
+                    this.scene.time.delayedCall(3000,()=>this.next());
+                }
+            },repeat:msg.length-1});
+        });
+    }
+    show(){ this.scene.tweens.add({targets:[this.bg,this.text],alpha:1,duration:300}); }
+    hide(){ this.scene.tweens.add({targets:[this.bg,this.text],alpha:0,duration:500}); }
+    destroy(){ if(this.timer)this.timer.remove(); this.bg.destroy(); this.text.destroy(); }
+}
+
+// ═══════════════════════════════════════════
+//  SECTION 8: GameScene — 核心遊戲
+// ═══════════════════════════════════════════
+class GameScene extends Phaser.Scene {
+    constructor() { super('GameScene'); }
+    init(data) {
+        this.lvlIdx = data.level ?? gameState.currentLevel;
+        this.ld = LEVELS[this.lvlIdx];
+        this.collected = [];
+        this.interSprites = [];
+        this.blocked = false; // dialog/closeup/book open
+        this.moveTarget = null;
+        this.pcx = this.ld.playerStart.x;
+        this.pcy = this.ld.playerStart.y;
+        this.riftShown = false;
+        this.bookOpen = false;
+        this.closeupOpen = false;
+        this.firstCollected = false;
+    }
+    create() {
+        this.cameras.main.fadeIn(600,0,0,0);
+        audio.init(); audio.startAmbient(this.lvlIdx);
+        // 地圖偏移
+        this.ox = W/2; this.oy = 80;
+        // 紙張背景 + 關卡色調
+        this.add.image(W/2,H/2,'paper').setDisplaySize(W,H).setDepth(0);
+        const overlay = this.add.graphics().setDepth(1);
+        overlay.fillStyle(Phaser.Display.Color.HexStringToColor(this.ld.bg).color,0.55);
+        overlay.fillRect(0,0,W,H);
+        // 畫地圖
+        this.drawMap();
+        this.drawTrees();
+        // 放置互動點
+        this.placeInteractions();
+        // 時間裂隙
+        if(this.ld.rift) this.createRift();
+        // 玩家
+        const si = toIso(this.pcx,this.pcy);
+        this.player = this.add.sprite(this.ox+si.x,this.oy+si.y-10,'player').setOrigin(0.5,0.8).setDepth(500);
+        // 灰塵粒子
+        this.spawnDust();
+        // 鍵盤
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.keyW=this.input.keyboard.addKey('W'); this.keyA=this.input.keyboard.addKey('A');
+        this.keyS=this.input.keyboard.addKey('S'); this.keyD=this.input.keyboard.addKey('D');
+        this.keyE=this.input.keyboard.addKey('E'); this.keyTab=this.input.keyboard.addKey('TAB');
+        // 點擊移動
+        this.input.on('pointerdown',p=>{
+            if(this.blocked) return;
+            const cart = fromIso(p.x-this.ox,p.y-this.oy);
+            if(cart.x>=0&&cart.x<COLS&&cart.y>=0&&cart.y<ROWS) this.moveTarget=cart;
+        });
+        // UI
+        this.createHUD();
+        // 旁白
+        this.narrator = new Narrator(this);
+        this.narrator.say(this.ld.narrator.enter, 800);
+        // 關卡介紹
+        this.showIntro();
+    }
+
+    // --- 地圖繪製 ---
+    drawMap() {
+        const mg = this.add.graphics().setDepth(2);
+        for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+            const tile=this.ld.map[r][c];
+            const iso=toIso(c,r); const sx=this.ox+iso.x,sy=this.oy+iso.y;
+            let col=this.ld.colors.ground, al=0.7;
+            if(tile===1) col=this.ld.colors.grass;
+            else if(tile===2){col=this.ld.colors.water;al=0.5;}
+            else if(tile===3){col=this.ld.colors.stone;al=0.6;}
+            else if(tile===4) col=this.ld.colors.accent;
+            else if(tile===5) col=this.ld.colors.accent;
+            // 菱形
+            mg.fillStyle(col,al);
+            mg.beginPath(); mg.moveTo(sx,sy-TILE_H/2); mg.lineTo(sx+TILE_W/2,sy);
+            mg.lineTo(sx,sy+TILE_H/2); mg.lineTo(sx-TILE_W/2,sy); mg.closePath(); mg.fillPath();
+            // 手繪邊線
+            mg.lineStyle(1,0x2c1810,0.12);
+            mg.beginPath(); mg.moveTo(sx,sy-TILE_H/2); mg.lineTo(sx+TILE_W/2,sy);
+            mg.lineTo(sx,sy+TILE_H/2); mg.lineTo(sx-TILE_W/2,sy); mg.closePath(); mg.strokePath();
+            // 水面波紋
+            if(tile===2){mg.lineStyle(1,0xffffff,0.12);mg.lineBetween(sx-6,sy,sx+6,sy);}
+        }
+    }
+    drawTrees() {
+        this.ld.trees.forEach(t=>{
+            const iso=toIso(t.x,t.y); const sx=this.ox+iso.x,sy=this.oy+iso.y;
+            const tg=this.add.graphics().setDepth(t.y*COLS+t.x+3);
+            // 樹幹
+            tg.fillStyle(0x5c4033,0.8); tg.fillRect(sx-3,sy-28,6,18);
+            // 樹冠（手繪感）
+            tg.fillStyle(this.ld.colors.grass,0.7);
+            tg.fillCircle(sx,sy-36,12); tg.fillCircle(sx-7,sy-30,9); tg.fillCircle(sx+7,sy-30,9);
+            // 手繪描邊
+            tg.lineStyle(1,0x2c1810,0.25);
+            wobblyCircle(tg,sx,sy-36,12.5,10,1.5);
+        });
+    }
+
+    // --- 互動點 ---
+    placeInteractions() {
+        this.ld.interactions.forEach((inter,idx)=>{
+            const iso=toIso(inter.tileX,inter.tileY);
+            const sx=this.ox+iso.x, sy=this.oy+iso.y;
+            const ct=this.add.container(sx,sy-6).setDepth(inter.tileY*COLS+inter.tileX+3);
+            // 發光光環
+            const glow=this.add.image(0,0,'glow').setScale(2.5).setAlpha(0.3).setTint(GOLD_HEX);
+            ct.add(glow);
+            // Emoji
+            const icon=this.add.text(0,-6,inter.emoji,{fontSize:'22px'}).setOrigin(0.5);
+            ct.add(icon);
+            // 名稱（靠近才顯示）
+            const label=this.add.text(0,14,inter.name,{
+                fontSize:'10px',fontFamily:'"Microsoft JhengHei",serif',color:GOLD,
+                stroke:'#000',strokeThickness:2
+            }).setOrigin(0.5).setAlpha(0);
+            ct.add(label);
+            ct.setSize(40,40).setInteractive({useHandCursor:true});
+            ct.on('pointerdown',()=>{ if(!this.blocked) this.tryInteract(idx); });
+            // 浮動動畫
+            this.tweens.add({targets:icon,y:-10,duration:1800,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+            this.tweens.add({targets:glow,alpha:0.1,scaleX:3,scaleY:3,duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+            ct._inter=inter; ct._idx=idx; ct._glow=glow; ct._label=label; ct._icon=icon;
+            this.interSprites.push(ct);
+        });
+    }
+    tryInteract(idx) {
+        const ct=this.interSprites[idx]; const inter=ct._inter;
+        const dist=Phaser.Math.Distance.Between(this.pcx,this.pcy,inter.tileX,inter.tileY);
+        if(dist>INTERACT_R){ this.moveTarget={x:inter.tileX,y:inter.tileY}; return; }
+        if(this.collected.includes(inter.id)) return;
+        // 先決條件檢查
+        if(inter.prereq && !this.collected.includes(inter.prereq)){
+            this.narrator.say('似乎還缺少什麼線索...也許應該先探索其他地方。');
+            return;
+        }
+        audio.click();
+        this.openCloseup(inter,ct);
+    }
+
+    // --- Close-up 互動面板 (Cube Escape 風格) ---
+    openCloseup(inter,ct) {
+        this.blocked=true; this.closeupOpen=true;
+        const cg=this.add.container(W/2,H/2).setDepth(900).setAlpha(0);
+        this._closeupContainer=cg;
+        // 遮罩
+        const mask=this.add.rectangle(0,0,W,H,0x000000,0.6).setOrigin(0.5);
+        cg.add(mask);
+        // 紙張面板
+        const panel=this.add.image(0,0,'paperDark').setDisplaySize(500,360);
+        cg.add(panel);
+        // 手繪邊框
+        const border=this.add.graphics();
+        drawInkBorder(border,-248,-178,496,356,0x5c4033);
+        cg.add(border);
+        // 標題
+        cg.add(this.add.text(0,-155,inter.closeupTitle,{
+            fontSize:'20px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:INK
+        }).setOrigin(0.5));
+        // 場景繪製
+        this.drawCloseupScene(cg,inter);
+        // 提示文字
+        const hint=this.add.text(0,60,inter.closeupHint,{
+            fontSize:'13px',fontFamily:'"Microsoft JhengHei",serif',color:INK_LIGHT,align:'center'
+        }).setOrigin(0.5);
+        cg.add(hint);
+        // 互動按鈕（蒐集證據）
+        const collectBtn=this.add.rectangle(0,110,160,36,0x2c1810,0.1)
+            .setStrokeStyle(1,0x8a6a3a,0.6).setInteractive({useHandCursor:true});
+        cg.add(collectBtn);
+        const collectTxt=this.add.text(0,110,`蒐集 ${inter.emoji} ${inter.name}`,{
+            fontSize:'12px',fontFamily:'"Microsoft JhengHei",serif',color:GOLD
+        }).setOrigin(0.5);
+        cg.add(collectTxt);
+        collectBtn.on('pointerover',()=>collectBtn.setFillStyle(0x8a6a3a,0.2));
+        collectBtn.on('pointerout',()=>collectBtn.setFillStyle(0x2c1810,0.1));
+        collectBtn.on('pointerdown',()=>{
+            audio.collect();
+            // 顯示揭露文字
+            hint.setText('');
+            collectBtn.setVisible(false); collectTxt.setVisible(false);
+            const reveal=this.add.text(0,30,inter.revealText,{
+                fontSize:'13px',fontFamily:'Georgia,"Microsoft JhengHei",serif',
+                color:INK,align:'center',lineSpacing:6,wordWrap:{width:420}
+            }).setOrigin(0.5,0).setAlpha(0);
+            cg.add(reveal);
+            this.tweens.add({targets:reveal,alpha:1,duration:600});
+            // 描述
+            const descTxt=this.add.text(0,140,inter.desc,{
+                fontSize:'11px',fontFamily:'"Microsoft JhengHei",serif',
+                color:INK_LIGHT,fontStyle:'italic'
+            }).setOrigin(0.5).setAlpha(0);
+            cg.add(descTxt);
+            this.tweens.add({targets:descTxt,alpha:1,duration:600,delay:400});
+            // 關閉提示
+            const closeTxt=this.add.text(0,165,'[ 點擊任意處關閉 ]',{
+                fontSize:'10px',color:'#8a7a6a'
+            }).setOrigin(0.5).setAlpha(0);
+            cg.add(closeTxt);
+            this.tweens.add({targets:closeTxt,alpha:1,duration:400,delay:800,onComplete:()=>{
+                this.time.delayedCall(300,()=>{
+                    mask.setInteractive();
+                    mask.once('pointerdown',()=>this.closeCloseup(inter,ct));
+                    this.input.keyboard.once('keydown',()=>this.closeCloseup(inter,ct));
+                });
+            }});
+        });
+        // 右上關閉按鈕
+        const closeX=this.add.text(230,-165,'✕',{fontSize:'18px',color:INK_LIGHT})
+            .setOrigin(0.5).setInteractive({useHandCursor:true});
+        cg.add(closeX);
+        closeX.on('pointerdown',()=>{ this.closeCloseup(null,null); });
+        // 淡入
+        this.tweens.add({targets:cg,alpha:1,duration:400});
+    }
+    drawCloseupScene(cg,inter) {
+        const sg=this.add.graphics();
+        const bgType=inter.closeupBg;
+        // 場景插圖區域
+        const ilY=-50; const ilW=200, ilH=120;
+        if(bgType==='stone'){
+            sg.fillStyle(0x8a8a7a,0.4); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            sg.lineStyle(2,0x5c4033,0.5); wobblyRect(sg,-ilW/2,ilY-ilH/2,ilW,ilH,2);
+        } else if(bgType==='bush'||bgType==='tree'){
+            sg.fillStyle(this.ld.colors.grass,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            // 葉子
+            for(let i=0;i<8;i++){
+                sg.fillStyle(this.ld.colors.grass,0.2+Math.random()*0.2);
+                sg.fillCircle(-60+Math.random()*120,ilY-30+Math.random()*60,8+Math.random()*12);
+            }
+        } else if(bgType==='ground'){
+            sg.fillStyle(this.ld.colors.ground,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            // 地面紋理
+            sg.lineStyle(1,0x2c1810,0.1);
+            for(let i=0;i<6;i++) wobblyLine(sg,-80,ilY-20+i*12,80,ilY-18+i*12,8,3);
+        } else if(bgType==='sky'){
+            sg.fillStyle(0x2a3a5a,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+        } else if(bgType==='gate'){
+            sg.fillStyle(0x4a3a2a,0.4); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            // 門框
+            sg.lineStyle(2,0x8a6a3a,0.5);
+            sg.strokeRect(-30,ilY-50,60,80);
+            sg.lineBetween(-30,ilY-50,0,ilY-65); sg.lineBetween(0,ilY-65,30,ilY-50);
+        } else if(bgType==='altar'){
+            sg.fillStyle(this.ld.colors.ground,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            sg.fillStyle(0x8a8a7a,0.4); sg.fillRect(-25,ilY-10,50,30); // 祭壇石
+        } else if(bgType==='face'){
+            sg.fillStyle(0x3a2a1a,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            sg.lineStyle(1.5,0x8a6a3a,0.3); wobblyCircle(sg,0,ilY,35,16,3); // 臉
+        } else if(bgType==='scroll'){
+            sg.fillStyle(0xd4c090,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            sg.lineStyle(1,0x8a6a3a,0.3);
+            for(let i=0;i<5;i++) wobblyLine(sg,-70,ilY-35+i*16,70,ilY-35+i*16,6,2);
+        } else if(bgType==='ruins'||bgType==='temple'){
+            sg.fillStyle(0x3a3040,0.3); sg.fillRoundedRect(-ilW/2,ilY-ilH/2,ilW,ilH,8);
+            sg.lineStyle(1.5,0x5a5060,0.3);
+            sg.strokeRect(-40,ilY-30,15,50); sg.strokeRect(25,ilY-30,15,50); // 柱子
+        }
+        // 中央大 emoji
+        cg.add(this.add.text(0,ilY,inter.emoji,{fontSize:'40px'}).setOrigin(0.5));
+        cg.add(sg);
+    }
+    closeCloseup(inter,ct) {
+        if(!this.closeupOpen) return;
+        if(inter && !this.collected.includes(inter.id)){
+            this.collected.push(inter.id);
+            gameState.collected.push(inter.id);
+            // 隱藏地圖上的圖示
+            if(ct){
+                this.tweens.add({targets:ct,scaleX:0,scaleY:0,alpha:0,duration:400,ease:'Back.easeIn',
+                    onComplete:()=>ct.setVisible(false)});
+            }
+            this.updateInventory();
+            if(!this.firstCollected){this.firstCollected=true;this.narrator.say(this.ld.narrator.first);}
+            if(this.collected.length===this.ld.interactions.length){
+                this.narrator.say(this.ld.narrator.allFound,1000);
+            }
+        }
+        this.tweens.add({targets:this._closeupContainer,alpha:0,duration:300,
+            onComplete:()=>{this._closeupContainer.destroy();this.closeupOpen=false;
+                if(this.collected.length===this.ld.interactions.length) this.time.delayedCall(3500,()=>this.openStage());
+                else this.blocked=false;
+            }});
+    }
+
+    // --- 時間裂隙 (Moncage 風格) ---
+    createRift() {
+        const r=this.ld.rift;
+        const iso=toIso(r.tileX,r.tileY); const sx=this.ox+iso.x,sy=this.oy+iso.y;
+        this.riftX=r.tileX; this.riftY=r.tileY;
+        // 裂隙視覺
+        const rg=this.add.graphics().setDepth(r.tileY*COLS+r.tileX+3);
+        rg.lineStyle(2,GLOW_BLUE_HEX,0.4);
+        rg.lineBetween(sx-8,sy-15,sx+3,sy+12);
+        rg.lineBetween(sx+3,sy+12,sx-5,sy+20);
+        rg.lineStyle(1,GLOW_BLUE_HEX,0.2);
+        rg.lineBetween(sx-12,sy-10,sx,sy+15);
+        this.riftGfx=rg;
+        // 發光動畫
+        this.tweens.add({targets:rg,alpha:0.3,duration:1500,yoyo:true,repeat:-1});
+        // 預覽面板（隱藏）
+        this.riftPanel=this.add.container(W/2,H/2).setDepth(800).setAlpha(0);
+        const rpBg=this.add.rectangle(0,0,W,H,0x000000,0.7);
+        this.riftPanel.add(rpBg);
+        // 分割線
+        const splitLine=this.add.graphics();
+        splitLine.lineStyle(3,GLOW_BLUE_HEX,0.6);
+        splitLine.lineBetween(0,-200,0,200);
+        // 發光邊線
+        for(let i=-200;i<200;i+=20){
+            splitLine.lineStyle(1,GLOW_BLUE_HEX,0.1+Math.random()*0.2);
+            splitLine.lineBetween(-2+Math.random()*4,i,-2+Math.random()*4,i+20);
+        }
+        this.riftPanel.add(splitLine);
+        // 左側：當前時代
+        this.riftPanel.add(this.add.text(-200,-100,this.ld.name,{
+            fontSize:'24px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GOLD
+        }).setOrigin(0.5));
+        this.riftPanel.add(this.add.text(-200,-60,this.ld.sub,{fontSize:'12px',color:'#8a7a6a'}).setOrigin(0.5));
+        // 右側：下個時代預覽
+        this.riftPanel.add(this.add.text(200,-100,r.preview,{
+            fontSize:'24px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GLOW_BLUE
+        }).setOrigin(0.5));
+        this.riftPanel.add(this.add.text(200,-40,r.previewEmoji,{fontSize:'48px'}).setOrigin(0.5));
+        this.riftPanel.add(this.add.text(200,20,r.hint,{
+            fontSize:'14px',fontFamily:'"Microsoft JhengHei",serif',color:'#8a9aaa',fontStyle:'italic'
+        }).setOrigin(0.5));
+        // 關閉提示
+        this.riftPanel.add(this.add.text(0,170,'移開即關閉',{fontSize:'11px',color:'#666'}).setOrigin(0.5));
+    }
+    checkRift() {
+        if(!this.ld.rift || this.riftShown) return;
+        const dist=Phaser.Math.Distance.Between(this.pcx,this.pcy,this.riftX,this.riftY);
+        if(dist<2 && this.riftPanel.alpha<0.5){
+            audio.rift(); this.riftShown=true;
+            if(this.ld.narrator.rift) this.narrator.say(this.ld.narrator.rift);
+            this.tweens.add({targets:this.riftPanel,alpha:1,duration:600});
+        }
+        if(dist>3.5 && this.riftPanel.alpha>0.5){
+            this.tweens.add({targets:this.riftPanel,alpha:0,duration:400});
+        }
+    }
+
+    // --- 時間之書 ---
+    toggleBook() {
+        if(this.closeupOpen) return;
+        audio.page();
+        if(this.bookOpen) { this.closeBook(); return; }
+        this.bookOpen=true; this.blocked=true;
+        this.bookCt=this.add.container(W/2,H/2).setDepth(880).setAlpha(0);
+        // 遮罩
+        this.bookCt.add(this.add.rectangle(0,0,W,H,0x000000,0.6));
+        // 書頁背景
+        this.bookCt.add(this.add.image(0,0,'paper').setDisplaySize(600,440));
+        // 邊框
+        const bb=this.add.graphics();
+        drawInkBorder(bb,-298,-218,596,436,0x5c4033);
+        this.bookCt.add(bb);
+        // 標題
+        this.bookCt.add(this.add.text(0,-195,'時 間 之 書',{
+            fontSize:'22px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:INK
+        }).setOrigin(0.5));
+        this.bookCt.add(this.add.text(0,-170,`第 ${this.lvlIdx+1} 章 — ${this.ld.name}`,{
+            fontSize:'13px',color:INK_LIGHT,fontFamily:'"Microsoft JhengHei",serif'
+        }).setOrigin(0.5));
+        // 分隔線
+        const sep=this.add.graphics(); sep.lineStyle(1,0x8a6a3a,0.3); wobblyLine(sep,-250,-155,250,-155,12,2);
+        this.bookCt.add(sep);
+        // 證據列表
+        this.ld.interactions.forEach((inter,i)=>{
+            const y=-130+i*68;
+            const found=this.collected.includes(inter.id);
+            // 邊框
+            const ig=this.add.graphics();
+            ig.lineStyle(1,found?0x8a6a3a:0x666666,found?0.5:0.2);
+            wobblyRect(ig,-260,y,520,58,1.5);
+            this.bookCt.add(ig);
+            if(found){
+                this.bookCt.add(this.add.text(-240,y+8,inter.emoji,{fontSize:'24px'}));
+                this.bookCt.add(this.add.text(-205,y+6,inter.name,{fontSize:'14px',color:INK,fontFamily:'"Microsoft JhengHei",serif',fontStyle:'bold'}));
+                this.bookCt.add(this.add.text(-205,y+28,inter.desc,{fontSize:'10px',color:INK_LIGHT,fontFamily:'"Microsoft JhengHei",serif',wordWrap:{width:440}}));
+            } else {
+                this.bookCt.add(this.add.text(-240,y+8,'❓',{fontSize:'24px'}));
+                this.bookCt.add(this.add.text(-205,y+16,'未發現',{fontSize:'13px',color:'#888',fontFamily:'"Microsoft JhengHei",serif'}));
+                if(inter.prereq && !this.collected.includes(inter.prereq)){
+                    this.bookCt.add(this.add.text(-205,y+34,'（需要先找到其他線索）',{fontSize:'9px',color:'#777',fontFamily:'"Microsoft JhengHei",serif'}));
+                }
+            }
+        });
+        // 關閉
+        const closeBtn=this.add.text(280,-200,'✕',{fontSize:'18px',color:INK_LIGHT}).setInteractive({useHandCursor:true});
+        closeBtn.on('pointerdown',()=>this.closeBook());
+        this.bookCt.add(closeBtn);
+        this.tweens.add({targets:this.bookCt,alpha:1,duration:300});
+    }
+    closeBook() {
+        if(!this.bookOpen) return;
+        this.tweens.add({targets:this.bookCt,alpha:0,duration:250,onComplete:()=>{
+            this.bookCt.destroy(); this.bookOpen=false; this.blocked=false;
+        }});
+    }
+
+    // --- HUD ---
+    createHUD() {
+        // 頂部列
+        this.add.rectangle(W/2,18,W,36,0x1a1510,0.7).setDepth(800);
+        this.add.text(14,10,`第 ${this.lvlIdx+1} 章 — ${this.ld.name}`,{
+            fontSize:'14px',fontFamily:'"Microsoft JhengHei",serif',color:GOLD
+        }).setDepth(801);
+        this.counterTxt=this.add.text(W-14,10,`證據 0/${this.ld.interactions.length}`,{
+            fontSize:'12px',color:'#8a8a7a',fontFamily:'"Microsoft JhengHei",serif'
+        }).setOrigin(1,0).setDepth(801);
+        // 時間之書按鈕
+        const bookBtn=this.add.text(W-14,H-18,'📖 時間之書 [Tab]',{
+            fontSize:'11px',color:GOLD,fontFamily:'"Microsoft JhengHei",serif'
+        }).setOrigin(1,0.5).setDepth(801).setInteractive({useHandCursor:true});
+        bookBtn.on('pointerdown',()=>this.toggleBook());
+        // 右側背包
+        this.invBg=this.add.rectangle(W-55,H/2,90,320,0x1a1510,0.5)
+            .setStrokeStyle(1,0x8a6a3a,0.2).setDepth(800);
+        this.add.text(W-55,H/2-148,'證據',{fontSize:'10px',color:GOLD,fontFamily:'"Microsoft JhengHei",serif'}).setOrigin(0.5).setDepth(801);
+        this.invSlots=[];
+        for(let i=0;i<5;i++){
+            const sy=H/2-105+i*55;
+            const bg=this.add.rectangle(W-55,sy,78,45,0x2c1810,0.2).setStrokeStyle(1,0x5c4033,0.2).setDepth(801);
+            const txt=this.add.text(W-55,sy,'?',{fontSize:'11px',color:'#5a4a3a',fontFamily:'"Microsoft JhengHei",serif'}).setOrigin(0.5).setDepth(802);
+            this.invSlots.push({bg,txt});
+        }
+        // 互動提示
+        this.hintTxt=this.add.text(W/2,H-65,'',{fontSize:'12px',color:GOLD,
+            fontFamily:'"Microsoft JhengHei",serif',stroke:'#000',strokeThickness:2
+        }).setOrigin(0.5).setDepth(801).setAlpha(0);
+    }
+    updateInventory() {
+        const idx=this.collected.length-1;
+        const inter=this.ld.interactions.find(i=>i.id===this.collected[idx]);
+        if(idx<this.invSlots.length && inter){
+            const s=this.invSlots[idx];
+            s.bg.setStrokeStyle(1,GOLD_HEX,0.5);
+            s.txt.setText(`${inter.emoji} ${inter.name}`).setColor(GOLD).setFontSize(10);
+        }
+        this.counterTxt.setText(`證據 ${this.collected.length}/${this.ld.interactions.length}`).setColor(GOLD);
+    }
+
+    // --- 關卡介紹 ---
+    showIntro() {
+        this.blocked=true;
+        const ct=this.add.container(W/2,H/2).setDepth(950);
+        this._introCt=ct;
+        ct.add(this.add.rectangle(0,0,W,H,0x000000,0.7));
+        const t1=this.add.text(0,-80,`第 ${this.lvlIdx+1} 章`,{fontSize:'14px',color:GLOW_BLUE,fontFamily:'"Microsoft JhengHei",serif'}).setOrigin(0.5).setAlpha(0);
+        const t2=this.add.text(0,-45,this.ld.name,{fontSize:'38px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GOLD,stroke:'#000',strokeThickness:2}).setOrigin(0.5).setAlpha(0);
+        const t3=this.add.text(0,-8,this.ld.sub,{fontSize:'15px',color:'#8a7a6a',fontFamily:'Georgia,serif'}).setOrigin(0.5).setAlpha(0);
+        const t4=this.add.text(0,40,this.ld.desc,{fontSize:'14px',color:'#aaa',fontFamily:'"Microsoft JhengHei",serif',align:'center',lineSpacing:6,wordWrap:{width:450}}).setOrigin(0.5,0).setAlpha(0);
+        const t5=this.add.text(0,130,'按任意鍵開始探索...',{fontSize:'11px',color:'#666'}).setOrigin(0.5).setAlpha(0);
+        [t1,t2,t3,t4,t5].forEach(t=>ct.add(t));
+        this.tweens.add({targets:t1,alpha:1,y:'-=8',duration:500,delay:200});
+        this.tweens.add({targets:t2,alpha:1,y:'-=8',duration:500,delay:500});
+        this.tweens.add({targets:t3,alpha:1,duration:500,delay:800});
+        this.tweens.add({targets:t4,alpha:1,duration:600,delay:1100});
+        this.tweens.add({targets:t5,alpha:1,duration:400,delay:1800,onComplete:()=>{
+            this.input.keyboard.once('keydown',()=>this.closeIntro());
+            this.input.once('pointerdown',()=>this.closeIntro());
+        }});
+    }
+    closeIntro() {
+        if(!this._introCt) return;
+        this.tweens.add({targets:this._introCt,alpha:0,duration:300,onComplete:()=>{
+            this._introCt.destroy();this._introCt=null;this.blocked=false;
+        }});
+    }
+
+    // --- 灰塵粒子 ---
+    spawnDust() {
+        for(let i=0;i<15;i++){
+            const d=this.add.circle(Phaser.Math.Between(50,W-120),Phaser.Math.Between(50,H-50),
+                Phaser.Math.Between(1,2),0xc4a97d,Phaser.Math.FloatBetween(0.05,0.15)).setDepth(700);
+            this.tweens.add({targets:d,y:d.y-Phaser.Math.Between(30,80),alpha:0,
+                duration:Phaser.Math.Between(5000,10000),delay:Phaser.Math.Between(0,4000),repeat:-1,yoyo:true});
+        }
+    }
+
+    // --- 進入因果舞台 ---
+    openStage() {
+        this.blocked=true;
+        audio.stopAmbient();
+        this.cameras.main.fadeOut(600,0,0,0);
+        this.time.delayedCall(600,()=>{
+            this.narrator.destroy();
+            this.scene.start('CausalityScene',{level:this.lvlIdx});
+        });
+    }
+
+    // --- 更新循環 ---
+    update(time,delta) {
+        if(this.blocked) return;
+        const dt=delta/1000;
+        let dx=0,dy=0;
+        if(this.cursors.up.isDown||this.keyW.isDown){dx-=1;dy-=1;}
+        if(this.cursors.down.isDown||this.keyS.isDown){dx+=1;dy+=1;}
+        if(this.cursors.left.isDown||this.keyA.isDown){dx-=1;dy+=1;}
+        if(this.cursors.right.isDown||this.keyD.isDown){dx+=1;dy-=1;}
+        // 滑鼠移動
+        if(this.moveTarget&&dx===0&&dy===0){
+            const tdx=this.moveTarget.x-this.pcx,tdy=this.moveTarget.y-this.pcy;
+            const d=Math.sqrt(tdx*tdx+tdy*tdy);
+            if(d>0.3){dx=tdx/d;dy=tdy/d;}else this.moveTarget=null;
+        } else if(dx||dy) this.moveTarget=null;
+        // 移動
+        if(dx||dy){
+            const len=Math.sqrt(dx*dx+dy*dy);
+            dx=(dx/len)*SPD*dt/TILE_W*2; dy=(dy/len)*SPD*dt/TILE_H*2;
+            const nx=this.pcx+dx,ny=this.pcy+dy;
+            if(nx>=0.5&&nx<COLS-0.5&&ny>=0.5&&ny<ROWS-0.5){
+                const tv=this.ld.map[Math.floor(ny)][Math.floor(nx)];
+                if(tv!==2&&tv!==3){this.pcx=nx;this.pcy=ny;}
+            }
+            const iso=toIso(this.pcx,this.pcy);
+            this.player.setPosition(this.ox+iso.x,this.oy+iso.y-10);
+            this.player.setDepth(Math.floor(this.pcy)*COLS+Math.floor(this.pcx)+3.5);
+        }
+        // E 鍵互動
+        if(Phaser.Input.Keyboard.JustDown(this.keyE)) this.interactNearest();
+        // Tab 時間之書
+        if(Phaser.Input.Keyboard.JustDown(this.keyTab)) this.toggleBook();
+        // 互動提示
+        this.updateHints();
+        // 時間裂隙
+        this.checkRift();
+    }
+    interactNearest() {
+        let best=null,bestD=Infinity;
+        this.interSprites.forEach((ct,i)=>{
+            if(!ct.visible) return;
+            if(this.collected.includes(ct._inter.id)) return;
+            const d=Phaser.Math.Distance.Between(this.pcx,this.pcy,ct._inter.tileX,ct._inter.tileY);
+            if(d<INTERACT_R&&d<bestD){bestD=d;best=i;}
+        });
+        if(best!==null) this.tryInteract(best);
+    }
+    updateHints() {
+        let near=false;
+        this.interSprites.forEach(ct=>{
+            if(!ct.visible||this.collected.includes(ct._inter.id)) return;
+            const d=Phaser.Math.Distance.Between(this.pcx,this.pcy,ct._inter.tileX,ct._inter.tileY);
+            if(d<INTERACT_R){near=true;ct._label.setAlpha(1);}else ct._label.setAlpha(0);
+        });
+        if(near){this.hintTxt.setText('按 E 或點擊互動');this.hintTxt.setAlpha(1);}
+        else this.hintTxt.setAlpha(0);
+    }
+}
+
+// ═══════════════════════════════════════════
+//  SECTION 9: CausalityScene — Storyteller 風格因果舞台
+// ═══════════════════════════════════════════
+class CausalityScene extends Phaser.Scene {
+    constructor() { super('CausalityScene'); }
+    init(data) {
+        this.lvlIdx = data.level;
+        this.ld = LEVELS[this.lvlIdx];
+        this.stage = this.ld.stage;
+        this.cards = [];
+        this.actSlots = []; // [{rect,x,y,acceptIds,filled:[]}]
+        this.solved = [];
+        this.allSolved = false;
+    }
+    create() {
+        this.cameras.main.fadeIn(500,0,0,0);
+        // 紙張背景
+        this.add.image(W/2,H/2,'paper').setDisplaySize(W,H);
+        const ov = this.add.graphics();
+        ov.fillStyle(0x1a1510,0.4); ov.fillRect(0,0,W,H);
+        // 標題
+        this.add.text(W/2,30,'因 果 舞 台',{
+            fontSize:'26px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:INK
+        }).setOrigin(0.5);
+        this.add.text(W/2,58,'將證據拖入正確的幕中，還原因果關係',{
+            fontSize:'12px',color:INK_LIGHT,fontFamily:'"Microsoft JhengHei",serif'
+        }).setOrigin(0.5);
+        // 時間軸箭頭
+        const arrowG = this.add.graphics();
+        arrowG.lineStyle(2,GOLD_HEX,0.4);
+        wobblyLine(arrowG,100,165,W-100,165,20,1.5);
+        arrowG.fillStyle(GOLD_HEX,0.4);
+        arrowG.fillTriangle(W-100,165,W-115,158,W-115,172);
+        this.add.text(85,155,'起因',{fontSize:'10px',color:INK_LIGHT}).setOrigin(1,0.5);
+        this.add.text(W-85,155,'結果',{fontSize:'10px',color:INK_LIGHT}).setOrigin(0,0.5);
+        // 幕 (Acts)
+        const actCount = this.stage.acts.length;
+        const actW = 180, actH = 200;
+        const totalW = actCount * actW + (actCount-1) * 30;
+        const startX = (W - totalW) / 2 + actW/2;
+        this.stage.acts.forEach((act, i) => {
+            const ax = startX + i * (actW + 30);
+            const ay = 260;
+            // 幕背景
+            const abg = this.add.rectangle(ax, ay, actW, actH, Phaser.Display.Color.IntegerToColor(act.color).color, 0.3)
+                .setStrokeStyle(1, 0x8a6a3a, 0.5);
+            // 手繪邊框
+            const ag = this.add.graphics();
+            ag.lineStyle(1.5, 0x8a6a3a, 0.4);
+            wobblyRect(ag, ax-actW/2, ay-actH/2, actW, actH, 2);
+            // 幕標題
+            this.add.text(ax, ay-actH/2+15, act.title, {
+                fontSize:'13px',fontFamily:'"Microsoft JhengHei",serif',color:GOLD
+            }).setOrigin(0.5);
+            // Slot 區域
+            const slotY = ay + 10;
+            const slotCount = act.slots.length;
+            const slots = [];
+            act.slots.forEach((slotId, si) => {
+                const sx = ax + (si - (slotCount-1)/2) * 80;
+                const slotRect = this.add.rectangle(sx, slotY, 70, 50, 0x2c1810, 0.15)
+                    .setStrokeStyle(1, 0x8a6a3a, 0.3);
+                this.add.text(sx, slotY, '?', {fontSize:'18px',color:'#5a4a3a'}).setOrigin(0.5);
+                slots.push({ rect: slotRect, x: sx, y: slotY, acceptId: slotId, filled: null });
+            });
+            // 幕動畫區域（成功後顯示）
+            const animArea = this.add.container(ax, ay + actH/2 - 25).setAlpha(0);
+            const animText = this.add.text(0, 0, act.text, {
+                fontSize:'10px',fontFamily:'"Microsoft JhengHei",serif',color:'#c4b090',
+                align:'center',lineSpacing:4,wordWrap:{width:actW-20}
+            }).setOrigin(0.5);
+            animArea.add(animText);
+            this.actSlots.push({ bg: abg, slots, act, animArea, solved: false });
+        });
+        // 可拖曳的證據卡片（打亂）
+        const allSlotIds = this.stage.acts.flatMap(a => a.slots);
+        const evidences = allSlotIds.map(id => this.ld.interactions.find(i => i.id === id));
+        const shuffled = Phaser.Utils.Array.Shuffle([...evidences]);
+        const cardY = H - 90;
+        const cardW = 90, cardSpacing = 100;
+        const cardTotalW = shuffled.length * cardW + (shuffled.length-1) * (cardSpacing-cardW);
+        const cardStartX = (W - cardTotalW) / 2 + cardW/2;
+        shuffled.forEach((ev, i) => {
+            const cx = cardStartX + i * cardSpacing;
+            const cardBg = this.add.rectangle(cx, cardY, cardW, 60, 0x2c1810, 0.15)
+                .setStrokeStyle(1, GOLD_HEX, 0.5)
+                .setInteractive({ useHandCursor: true, draggable: true });
+            const cardEmoji = this.add.text(cx, cardY-10, ev.emoji, {fontSize:'22px'}).setOrigin(0.5);
+            const cardName = this.add.text(cx, cardY+14, ev.name, {
+                fontSize:'9px',color:INK,fontFamily:'"Microsoft JhengHei",serif',
+                align:'center',wordWrap:{width:80}
+            }).setOrigin(0.5);
+            const card = {
+                bg: cardBg, emoji: cardEmoji, nameText: cardName,
+                data: ev, origX: cx, origY: cardY, placedSlot: null
+            };
+            cardBg.on('dragstart', () => {
+                audio.click();
+                cardBg.setDepth(100); cardEmoji.setDepth(101); cardName.setDepth(101);
+                cardBg.setStrokeStyle(2, GLOW_BLUE_HEX, 0.8);
+                // 如果在 slot 裡，移出
+                if (card.placedSlot) {
+                    card.placedSlot.filled = null;
+                    card.placedSlot = null;
+                    this.checkActSolved();
+                }
+            });
+            cardBg.on('drag', (p, dragX, dragY) => {
+                cardBg.setPosition(dragX, dragY);
+                cardEmoji.setPosition(dragX, dragY-10);
+                cardName.setPosition(dragX, dragY+14);
+            });
+            cardBg.on('dragend', () => {
+                cardBg.setDepth(0); cardEmoji.setDepth(1); cardName.setDepth(1);
+                cardBg.setStrokeStyle(1, GOLD_HEX, 0.5);
+                let placed = false;
+                // 檢查所有 slot
+                for (const actGroup of this.actSlots) {
+                    for (const slot of actGroup.slots) {
+                        const dist = Phaser.Math.Distance.Between(cardBg.x, cardBg.y, slot.x, slot.y);
+                        if (dist < 50 && slot.filled === null) {
+                            slot.filled = card;
+                            card.placedSlot = slot;
+                            this.tweens.add({targets:cardBg,x:slot.x,y:slot.y,duration:200,ease:'Back.easeOut'});
+                            this.tweens.add({targets:cardEmoji,x:slot.x,y:slot.y-10,duration:200});
+                            this.tweens.add({targets:cardName,x:slot.x,y:slot.y+14,duration:200});
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (placed) break;
+                }
+                if (!placed) {
+                    this.tweens.add({targets:cardBg,x:card.origX,y:card.origY,duration:250,ease:'Back.easeOut'});
+                    this.tweens.add({targets:cardEmoji,x:card.origX,y:card.origY-10,duration:250});
+                    this.tweens.add({targets:cardName,x:card.origX,y:card.origY+14,duration:250});
+                }
+                this.time.delayedCall(250, () => this.checkActSolved());
+            });
+            this.cards.push(card);
+        });
+        // 驗證按鈕
+        this.verifyBtn = this.add.text(W/2, H-25, '[ 驗證因果鏈 ]', {
+            fontSize:'13px',color:GOLD,fontFamily:'"Microsoft JhengHei",serif',
+            backgroundColor:'#2c1810',padding:{x:14,y:6}
+        }).setOrigin(0.5).setInteractive({useHandCursor:true});
+        this.verifyBtn.on('pointerdown', () => this.verify());
+        // 提示文字
+        this.feedbackTxt = this.add.text(W/2, H-50, '', {
+            fontSize:'11px',color:'#aa6666',fontFamily:'"Microsoft JhengHei",serif'
+        }).setOrigin(0.5);
+    }
+
+    checkActSolved() {
+        this.actSlots.forEach(ag => {
+            const allFilled = ag.slots.every(s => s.filled !== null);
+            const allCorrect = allFilled && ag.slots.every(s => s.filled.data.id === s.acceptId);
+            if (allCorrect && !ag.solved) {
+                ag.solved = true;
+                audio.collect();
+                // 幕成功動畫
+                ag.bg.setFillStyle(Phaser.Display.Color.IntegerToColor(ag.act.color).color, 0.5);
+                ag.slots.forEach(s => {
+                    if(s.filled) s.filled.bg.setStrokeStyle(2, 0x4a8a4a, 0.8);
+                });
+                // 顯示動畫文字
+                this.tweens.add({targets:ag.animArea,alpha:1,duration:600});
+                // 幕中演出小動畫
+                const emoji = this.add.text(ag.bg.x, ag.bg.y-20, ag.act.anim.emoji, {
+                    fontSize:'28px'
+                }).setOrigin(0.5).setAlpha(0);
+                this.tweens.add({targets:emoji,alpha:1,y:ag.bg.y-40,duration:500,ease:'Back.easeOut'});
+            }
+        });
+        // 所有幕都解決了嗎？
+        if (this.actSlots.every(ag => ag.solved) && !this.allSolved) {
+            this.allSolved = true;
+            this.time.delayedCall(1000, () => this.onAllSolved());
+        }
+    }
+
+    verify() {
+        // 手動驗證按鈕
+        let anyWrong = false;
+        this.actSlots.forEach(ag => {
+            ag.slots.forEach(s => {
+                if (!s.filled) return;
+                if (s.filled.data.id !== s.acceptId) {
+                    anyWrong = true;
+                    // 搖晃錯誤卡片
+                    this.tweens.add({targets:s.filled.bg,x:s.x-4,duration:40,yoyo:true,repeat:5});
+                    s.filled.bg.setStrokeStyle(2, 0xaa4444, 0.8);
+                    this.time.delayedCall(1000, () => {
+                        if(s.filled) s.filled.bg.setStrokeStyle(1, GOLD_HEX, 0.5);
+                    });
+                }
+            });
+        });
+        if (anyWrong) {
+            audio.error();
+            this.feedbackTxt.setText('紅色標記的證據放錯了位置，再想想看...');
+            this.time.delayedCall(2500, () => this.feedbackTxt.setText(''));
+        } else {
+            this.checkActSolved();
+        }
+    }
+
+    onAllSolved() {
+        audio.success();
+        // 閃光
+        const flash = this.add.rectangle(W/2,H/2,W,H,0xffffff,0).setDepth(200);
+        this.tweens.add({targets:flash,alpha:0.2,duration:300,yoyo:true,onComplete:()=>flash.destroy()});
+        // 成功文字
+        const suc = this.add.text(W/2,H/2-20,'因果鏈修復完成！',{
+            fontSize:'28px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GOLD,
+            stroke:'#000',strokeThickness:2
+        }).setOrigin(0.5).setDepth(201).setAlpha(0);
+        this.tweens.add({targets:suc,alpha:1,y:'-=15',duration:500,ease:'Back.easeOut'});
+        const tp = this.add.text(W/2,H/2+20,`關鍵轉折點：${this.ld.turningPoint}`,{
+            fontSize:'14px',color:'#c4b090',fontFamily:'"Microsoft JhengHei",serif',
+            align:'center',wordWrap:{width:500}
+        }).setOrigin(0.5).setDepth(201).setAlpha(0);
+        this.tweens.add({targets:tp,alpha:1,duration:600,delay:500});
+        // 轉場
+        this.time.delayedCall(3500, () => {
+            gameState.completedLevels.push(this.lvlIdx);
+            this.cameras.main.fadeOut(800,0,0,0);
+            this.time.delayedCall(800, () => {
+                this.scene.start('TransitionScene', {fromLevel: this.lvlIdx});
+            });
+        });
+    }
+}
+
+// ═══════════════════════════════════════════
+//  SECTION 10: TransitionScene — 時間線修復
+// ═══════════════════════════════════════════
+class TransitionScene extends Phaser.Scene {
+    constructor() { super('TransitionScene'); }
+    init(data) { this.fromLevel = data.fromLevel; this.ld = LEVELS[this.fromLevel]; }
+    create() {
+        this.cameras.main.fadeIn(500,0,0,0);
+        // 紙張背景＋暗色覆蓋
+        this.add.image(W/2,H/2,'paper').setDisplaySize(W,H);
+        const ov=this.add.graphics(); ov.fillStyle(0x0a0a14,0.75); ov.fillRect(0,0,W,H);
+        // 粒子匯聚到中心
+        for(let i=0;i<50;i++){
+            const p=this.add.circle(
+                Phaser.Math.Between(0,W),Phaser.Math.Between(0,H),
+                Phaser.Math.Between(1,3),GOLD_HEX,Phaser.Math.FloatBetween(0.2,0.6)
+            );
+            this.tweens.add({targets:p,x:W/2,y:H/2-60,alpha:0,
+                duration:Phaser.Math.Between(1500,3000),delay:Phaser.Math.Between(0,800),ease:'Cubic.easeIn'});
+        }
+        // 修復中文字
+        const repTxt=this.add.text(W/2,H/2-140,'時間線修復中...',{
+            fontSize:'18px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GLOW_BLUE
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({targets:repTxt,alpha:1,duration:600,delay:400});
+        // 中央光芒
+        const glow=this.add.circle(W/2,H/2-60,4,GOLD_HEX,0);
+        this.tweens.add({targets:glow,alpha:0.6,scaleX:10,scaleY:10,duration:1500,delay:1800,
+            ease:'Cubic.easeOut',onComplete:()=>{
+                this.tweens.add({targets:glow,alpha:0,scaleX:20,scaleY:20,duration:600});
+            }});
+        // 歷史小結
+        const sumTitle=this.add.text(W/2,H/2-50,`${this.ld.name} — 歷史小結`,{
+            fontSize:'20px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GOLD
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({targets:sumTitle,alpha:1,duration:600,delay:2800});
+        // 分隔線
+        const sepG=this.add.graphics().setAlpha(0);
+        sepG.lineStyle(1,GOLD_HEX,0.3); wobblyLine(sepG,W/2-200,H/2-28,W/2+200,H/2-28,12,2);
+        this.tweens.add({targets:sepG,alpha:1,duration:400,delay:3000});
+        const sumText=this.add.text(W/2,H/2-15,this.ld.summary,{
+            fontSize:'13px',fontFamily:'"Microsoft JhengHei",serif',color:'#b0a090',
+            align:'center',lineSpacing:7,wordWrap:{width:520}
+        }).setOrigin(0.5,0).setAlpha(0);
+        this.tweens.add({targets:sumText,alpha:1,duration:800,delay:3200});
+        // 下一關提示
+        const isLast = this.fromLevel >= LEVELS.length-1;
+        const nextMsg = isLast ? '進入結局...' : `前往下一個時代 — ${LEVELS[this.fromLevel+1].name}`;
+        const nextTxt=this.add.text(W/2,H-60,nextMsg,{
+            fontSize:'14px',color:GLOW_BLUE,fontFamily:'"Microsoft JhengHei",serif'
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({targets:nextTxt,alpha:1,duration:500,delay:5000,onComplete:()=>{
+            this.tweens.add({targets:nextTxt,alpha:0.3,duration:800,yoyo:true,repeat:-1});
+        }});
+        // 等待輸入
+        this.time.delayedCall(5000,()=>{
+            const go=()=>{
+                this.cameras.main.fadeOut(800,0,0,0);
+                this.time.delayedCall(800,()=>{
+                    if(isLast) this.scene.start('EndingScene');
+                    else{
+                        gameState.currentLevel=this.fromLevel+1;
+                        gameState.collected=[];
+                        this.scene.start('GameScene',{level:this.fromLevel+1});
+                    }
+                });
+            };
+            this.input.keyboard.once('keydown',go);
+            this.input.once('pointerdown',go);
+        });
+    }
+}
+
+// ═══════════════════════════════════════════
+//  SECTION 11: EndingScene — 結局
+// ═══════════════════════════════════════════
+class EndingScene extends Phaser.Scene {
+    constructor() { super('EndingScene'); }
+    create() {
+        this.cameras.main.fadeIn(1000,0,0,0);
+        // 紙張背景
+        this.add.image(W/2,H/2,'paper').setDisplaySize(W,H);
+        const ov=this.add.graphics(); ov.fillStyle(0x0a0a14,0.5); ov.fillRect(0,0,W,H);
+        // 彩虹
+        const rainbowColors=[0xcc3333,0xcc7733,0xcccc33,0x33cc33,0x3333cc,0x5500aa,0x8800cc];
+        const arcG=this.add.graphics().setDepth(1).setAlpha(0);
+        rainbowColors.forEach((c,i)=>{
+            arcG.lineStyle(3,c,0.5);
+            arcG.beginPath(); arcG.arc(W/2,H/2+120,180-i*10,Math.PI,0,false); arcG.strokePath();
+        });
+        this.tweens.add({targets:arcG,alpha:1,duration:2000,delay:1000});
+        // 標題
+        const endTitle=this.add.text(W/2,H/2-170,'創世紀篇 — 完',{
+            fontSize:'34px',fontFamily:'Georgia,"Microsoft JhengHei",serif',color:GOLD,
+            stroke:'#000',strokeThickness:2
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({targets:endTitle,alpha:1,y:'-=15',duration:800,delay:500,ease:'Back.easeOut'});
+        // 結語
+        const endText=this.add.text(W/2,H/2-100,[
+            '時間修復師，你成功修復了創世紀的時間線。',
+            '',
+            '從伊甸園的純真與墮落，到該隱與亞伯的兄弟之爭，',
+            '從世代的敗壞到諾亞方舟的洪水與重生——',
+            '',
+            '歷史告訴我們：',
+            '每一個選擇都有後果，每一次毀滅都蘊含著新生的可能。',
+            '',
+            '彩虹是約定，是希望，是故事的延續。',
+            '而你的旅程，才剛剛開始...'
+        ].join('\n'),{
+            fontSize:'14px',fontFamily:'"Microsoft JhengHei",serif',color:'#b0a090',
+            align:'center',lineSpacing:5
+        }).setOrigin(0.5,0).setAlpha(0);
+        this.tweens.add({targets:endText,alpha:1,duration:1000,delay:2000});
+        // 灰塵粒子
+        for(let i=0;i<20;i++){
+            const d=this.add.circle(Phaser.Math.Between(50,W-50),Phaser.Math.Between(50,H-50),
+                Phaser.Math.Between(1,2),GOLD_HEX,Phaser.Math.FloatBetween(0.05,0.15));
+            this.tweens.add({targets:d,y:d.y-40,alpha:0,duration:Phaser.Math.Between(4000,8000),
+                delay:Phaser.Math.Between(0,3000),repeat:-1,yoyo:true});
+        }
+        // 返回按鈕
+        const backBtn=this.add.text(W/2,H-55,'[ 返回主選單 ]',{
+            fontSize:'14px',color:GOLD,fontFamily:'"Microsoft JhengHei",serif',
+            backgroundColor:'#2c1810',padding:{x:16,y:8}
+        }).setOrigin(0.5).setAlpha(0).setInteractive({useHandCursor:true});
+        this.tweens.add({targets:backBtn,alpha:1,duration:500,delay:5000});
+        backBtn.on('pointerover',()=>backBtn.setColor(GLOW_BLUE));
+        backBtn.on('pointerout',()=>backBtn.setColor(GOLD));
+        backBtn.on('pointerdown',()=>{
+            this.cameras.main.fadeOut(800,0,0,0);
+            this.time.delayedCall(800,()=>this.scene.start('MenuScene'));
+        });
+    }
+}
+
+// ═══════════════════════════════════════════
+//  遊戲啟動
+// ═══════════════════════════════════════════
+const config = {
+    type: Phaser.AUTO, width: W, height: H,
+    parent: 'game-container', backgroundColor: '#1a1510',
+    scene: [BootScene, MenuScene, GameScene, CausalityScene, TransitionScene, EndingScene],
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+};
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
