@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayHorny · 設計定稿預覽</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:       #0d0d0d;
+    --surface:  #181818;
+    --surface2: #222;
+    --border:   #2e2e2e;
+    --red:      #d13639;
+    --text:     #f0f0f0;
+    --muted:    #777;
+    --act-bg:   rgba(209,54,57,0.12);
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  .shell { height: 100vh; }
+
+  /* ── Controls wrapper (auto-hide overlay) ── */
+  .controls-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    transform: translateY(calc(-100% + 8px));
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .controls-wrap:hover { transform: translateY(0); }
+  .controls-wrap::after {
+    content: '';
+    display: block;
+    height: 8px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    background-image: radial-gradient(ellipse 40px 2px at center 4px, rgba(255,255,255,0.18) 0%, transparent 100%);
+  }
+
+  /* ── Header ── */
+  .header {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .brand-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+  .brand-tag {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+  }
+  .final-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #3a9e6a;
+    background: rgba(58, 158, 106, 0.12);
+    border: 1px solid rgba(58, 158, 106, 0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+  }
+
+  /* Device toggle */
+  .device-toggle {
+    display: flex;
+    gap: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .device-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+  .device-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .device-btn.active { background: var(--surface2); color: var(--text); }
+
+  /* ── Control bar ── */
+  .ctrl-bar {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sec-tabs { display: flex; gap: 2px; }
+  .sec-tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+  .sec-tab.active { background: var(--act-bg); color: var(--red); }
+
+  .vr { width: 1px; height: 18px; background: var(--border); margin: 0 16px; flex-shrink: 0; }
+
+  /* ── Style summary chip ── */
+  .style-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .summary-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .summary-chip {
+    font-size: 11px;
+    font-weight: 500;
+    color: #9ecfb0;
+    background: rgba(58, 158, 106, 0.1);
+    border: 1px solid rgba(58, 158, 106, 0.25);
+    border-radius: 4px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+
+  /* ── Preview area ── */
+  .preview {
+    height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0;
+    position: relative;
+  }
+  .preview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+  }
+
+  /* ── Browser/Phone frame ── */
+  .frame-wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    width: 100%;
+    height: 100vh;
+    border-radius: 10px;
+    border: 1px solid #3d3d3d;
+    box-shadow: 0 20px 70px rgba(0,0,0,0.55);
+  }
+  .frame-wrap.is-mobile {
+    max-width: 393px;
+    border-radius: 44px;
+    border-width: 10px;
+    border-color: #252525;
+    box-shadow:
+      0 40px 100px rgba(0,0,0,0.75),
+      inset 0 0 0 1px rgba(255,255,255,0.06);
+    height: min(852px, calc(100% - 8px));
+  }
+
+  .frame-bar {
+    height: 38px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    background: #242424;
+    border-bottom: 1px solid #1a1a1a;
+    transition: all 0.4s;
+  }
+  .frame-wrap.is-mobile .frame-bar { display: none; }
+
+  .dots { display: flex; gap: 5px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+
+  .url-bar {
+    flex: 1;
+    background: #1c1c1c;
+    border: 1px solid #383838;
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .phone-notch {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    background: #252525;
+    flex-shrink: 0;
+  }
+  .notch-pill { width: 110px; height: 28px; background: #1a1a1a; border-radius: 14px; }
+  .frame-wrap.is-mobile .phone-notch { display: flex; }
+
+  .phone-home-bar {
+    display: none;
+    justify-content: center;
+    align-items: flex-end;
+    padding-bottom: 6px;
+    height: 26px;
+    background: #252525;
+    flex-shrink: 0;
+  }
+  .home-pill { width: 120px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; }
+  .frame-wrap.is-mobile .phone-home-bar { display: flex; }
+
+  .frame-content { flex: 1; overflow: hidden; background: #111; }
+  #preview-frame {
+    width: 100%; height: 100%;
+    border: none; display: block;
+    transition: opacity 0.25s;
+  }
+  #preview-frame.fading { opacity: 0.3; }
+
+  /* ── Info badge ── */
+  .combo-badge {
+    position: absolute;
+    bottom: 28px; right: 28px;
+    z-index: 10;
+    background: rgba(10,10,10,0.88);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    backdrop-filter: blur(8px);
+    line-height: 1.7;
+  }
+  .combo-badge strong { color: var(--text); font-size: 12px; }
+  .combo-badge .chosen { color: #9ecfb0; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Controls (auto-hide) -->
+  <div class="controls-wrap">
+
+    <div class="header">
+      <div class="brand">
+        <span class="brand-name">PlayHorny</span>
+        <span class="brand-tag">DESIGN PREVIEW</span>
+        <span class="final-badge">FINAL</span>
+      </div>
+      <div class="device-toggle">
+        <button class="device-btn active" id="btn-mobile" onclick="setDevice('mobile')">
+          <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17.5" r="1" fill="currentColor" stroke="none"/></svg>
+          手機版
+        </button>
+        <button class="device-btn" id="btn-desktop" onclick="setDevice('desktop')">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4" stroke-linecap="round"/></svg>
+          桌機版
+        </button>
+      </div>
+    </div>
+
+    <div class="ctrl-bar">
+      <div class="sec-tabs">
+        <button class="sec-tab active" id="tab-home" onclick="setSection('home')">首頁</button>
+        <button class="sec-tab"        id="tab-info" onclick="setSection('info')">情報站</button>
+      </div>
+      <div class="vr"></div>
+      <div class="style-summary">
+        <span class="summary-label">定稿樣式</span>
+        <span class="summary-chip" id="summary-chip">載入中…</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Preview -->
+  <div class="preview">
+    <div class="frame-wrap is-mobile" id="frame-wrap">
+      <div class="phone-notch"><div class="notch-pill"></div></div>
+      <div class="frame-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <div class="url-bar" id="url-bar">loading…</div>
+      </div>
+      <div class="frame-content">
+        <iframe id="preview-frame" src=""></iframe>
+      </div>
+      <div class="phone-home-bar"><div class="home-pill"></div></div>
+    </div>
+
+    <div class="combo-badge" id="combo-badge">
+      <strong id="badge-file">loading…</strong><br>
+      <span id="badge-desc">—</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* ── 定稿選擇 ── */
+  const FINAL = {
+    home: {
+      mobile:  { file: 'playhorny_v4.html',       label: '精選：1大＋3小直排' },
+      desktop: { file: 'playhorny_v2.html',        label: '精選：1大＋3小' },
+    },
+    info: {
+      mobile:  { file: '情報站_demo.html?g=3&t=3', label: '遊戲列：橫列＋下拉 ／ 篩選：多選 Pills' },
+      desktop: { file: '情報站_demo.html?g=3&t=3', label: '遊戲列：橫列＋下拉 ／ 篩選：多選 Pills' },
+    },
+  };
+
+  let device  = 'mobile';
+  let section = 'home';
+
+  function $v(id) { return document.getElementById(id); }
+  function act(id, on) { $v(id).classList.toggle('active', on); }
+
+  function currentSpec() { return FINAL[section][device]; }
+
+  function updatePreview() {
+    const spec  = currentSpec();
+    const frame = $v('preview-frame');
+
+    frame.classList.add('fading');
+    setTimeout(() => {
+      frame.src = spec.file;
+      frame.onload = () => frame.classList.remove('fading');
+      $v('url-bar').textContent    = spec.file;
+      $v('badge-file').textContent = spec.file;
+      $v('badge-desc').textContent = (section === 'home' ? '首頁' : '情報站') + ' · ' + spec.label;
+      $v('summary-chip').textContent = spec.label;
+    }, 200);
+  }
+
+  function setDevice(d) {
+    device = d;
+    $v('frame-wrap').classList.toggle('is-mobile', d === 'mobile');
+    act('btn-mobile',  d === 'mobile');
+    act('btn-desktop', d === 'desktop');
+    updatePreview();
+  }
+
+  function setSection(s) {
+    section = s;
+    ['home','info'].forEach(k => {
+      act(`tab-${k}`, k === s);
+    });
+    updatePreview();
+  }
+
+  /* ── Init ── */
+  setDevice('mobile');
+</script>
+</body>
+</html>

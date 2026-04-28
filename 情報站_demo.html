@@ -235,6 +235,8 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
 
 /* ── MOBILE (≤899px) ── */
 @media (max-width:899px) {
+  html, body { scrollbar-width:none; -ms-overflow-style:none; }
+  html::-webkit-scrollbar, body::-webkit-scrollbar { display:none; }
   .hero { padding:36px 16px 40px; }
   .hero-title { font-size:36px; letter-spacing:8px; }
   .page-body { padding:16px; }
@@ -251,6 +253,20 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
   body[data-type="2"] .el-ttabs { display:flex; }
   body[data-type="3"] .el-tpills { display:flex; }
   body[data-game="3"] .el-mobile-trigger-wrap { display:flex; }
+
+  /* ── game=3 mobile: 單排→雙排，最小改動 ── */
+  body[data-game="3"] .game-icons-scroll {
+    display:grid;
+    grid-template-rows:repeat(2,48px);
+    grid-auto-flow:column;
+    grid-auto-columns:auto;
+    gap:6px;
+    padding:4px 0;
+    scroll-snap-type:x mandatory;
+  }
+  body[data-game="3"] .game-icon-item { height:48px; }
+  body[data-game="3"] .game-icon-item[data-game="all"] .game-avatar { display:none !important; }
+  body[data-game="3"] .game-icon-item:nth-child(6n+1) { scroll-snap-align:start; }
 }
 
 /* ── DESKTOP (≥900px) ── */
@@ -374,11 +390,11 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
       <button class="scroll-btn" id="scrollLeft">&#8249;</button>
       <div class="game-icons-scroll" id="gameIcons">
         <div class="game-icon-item active" data-game="all"><div class="game-avatar all-avatar">全部</div><span class="game-avatar-label">全部</span></div>
-        <div class="game-icon-item" data-game="game1"><div class="game-avatar" style="background:#C8E6C9;"></div><span class="game-avatar-label">PlayHorny</span></div>
         <div class="game-icon-item" data-game="game2"><div class="game-avatar" style="background:#BBDEFB;"></div><span class="game-avatar-label">遊戲名稱1</span></div>
         <div class="game-icon-item" data-game="game3"><div class="game-avatar" style="background:#F8BBD0;"></div><span class="game-avatar-label">遊戲名稱2</span></div>
         <div class="game-icon-item" data-game="game4"><div class="game-avatar" style="background:#FFF9C4;"></div><span class="game-avatar-label">遊戲名稱3</span></div>
         <div class="game-icon-item" data-game="game5"><div class="game-avatar" style="background:#E1BEE7;"></div><span class="game-avatar-label">遊戲名稱4</span></div>
+        <div class="game-icon-item" data-game="game1"><div class="game-avatar" style="background:#C8E6C9;"></div><span class="game-avatar-label">PlayHorny</span></div>
         <div class="game-icon-item" data-game="game6"><div class="game-avatar" style="background:#B2EBF2;"></div><span class="game-avatar-label">遊戲名稱5</span></div>
       </div>
       <button class="scroll-btn" id="scrollRight">&#8250;</button>
@@ -459,7 +475,7 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
         <div class="type-sidebar-item active" data-type="全部">全部</div>
         <div class="type-sidebar-item" data-type="活動">活動</div>
         <div class="type-sidebar-item" data-type="更新">更新</div>
-        <div class="type-sidebar-item" data-type="新聞">新聞</div>
+        <div class="type-sidebar-item" data-type="消息">新聞</div>
         <div class="type-sidebar-item" data-type="系統">系統</div>
       </div>
     </aside>
@@ -477,15 +493,16 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
         <button class="type-tab active" data-type="全部">全部</button>
         <button class="type-tab" data-type="活動">活動</button>
         <button class="type-tab" data-type="更新">更新</button>
-        <button class="type-tab" data-type="新聞">新聞</button>
+        <button class="type-tab" data-type="消息">消息</button>
         <button class="type-tab" data-type="系統">系統</button>
+        <button class="type-tab" data-type="其他">其他</button>
       </div>
 
       <!-- ▸ 類型篩選 樣式3: 多選 Pills -->
       <div class="el-tpills">
         <button class="type-pill-btn active" data-type="活動"><i class="fas fa-check check-icon"></i>活動</button>
         <button class="type-pill-btn active" data-type="更新"><i class="fas fa-check check-icon"></i>更新</button>
-        <button class="type-pill-btn active" data-type="新聞"><i class="fas fa-check check-icon"></i>新聞</button>
+        <button class="type-pill-btn active" data-type="消息"><i class="fas fa-check check-icon"></i>消息</button>
         <button class="type-pill-btn active" data-type="系統"><i class="fas fa-check check-icon"></i>系統</button>
         <button class="type-pill-btn active" data-type="其他"><i class="fas fa-check check-icon"></i>其他</button>
       </div>
@@ -537,27 +554,27 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
           <div class="card-body"><div><div class="card-game-info"><span class="card-game-name">遊戲名稱2</span></div><div class="card-title">v2.3.5 品質更新・UI 全面優化</div><div class="card-desc">本次更新大幅改善遊戲介面可讀性，背包管理介面重新設計，技能說明文字更新，回饋優化效果顯著。</div></div><div class="card-footer"><span class="card-time">2026-03-28</span><span class="badge-active"><span class="badge-active-dot"></span>進行中</span><span class="badge-ended">已結束</span><span class="badge-remaining"></span><span class="card-type-badge">更新</span></div></div>
         </div>
 
-        <div class="news-card" data-type="新聞" data-game="game3">
+        <div class="news-card" data-type="消息" data-game="game3">
           <div class="card-image"></div>
           <div class="card-body"><div><div class="card-game-info"><span class="card-game-name">遊戲名稱2</span></div><div class="card-title">新英雄「影刃」預約登錄開放中</div><div class="card-desc">全新英雄「影刃」即將加入戰場，預約登錄可搶先體驗並獲得限定稱號，預約人數突破 10 萬解鎖隱藏獎勵。</div></div><div class="card-footer"><span class="card-time">2026-04-14</span><span class="badge-active"><span class="badge-active-dot"></span>進行中</span><span class="badge-ended">已結束</span><span class="badge-remaining"></span><span class="card-type-badge">新聞</span></div></div>
         </div>
 
-        <div class="news-card" data-type="新聞" data-game="game1">
+        <div class="news-card" data-type="消息" data-game="game1">
           <div class="card-image"></div>
           <div class="card-body"><div><div class="card-game-info"><span class="card-game-name">PlayHorny</span></div><div class="card-title">新副本「深淵之門」預約體驗</div><div class="card-desc">六人挑戰副本「深淵之門」即將開放，預約體驗資格每日開放 1000 組，採先搶先贏制度。</div></div><div class="card-footer"><span class="card-time">2026-04-20</span><span class="badge-active"><span class="badge-active-dot"></span>進行中</span><span class="badge-ended">已結束</span><span class="badge-remaining"></span><span class="card-type-badge">新聞</span></div></div>
         </div>
 
-        <div class="news-card" data-type="新聞" data-game="game2">
+        <div class="news-card" data-type="消息" data-game="game2">
           <div class="card-image"></div>
           <div class="card-body"><div><div class="card-game-info"><span class="card-game-name">遊戲名稱1</span></div><div class="card-title">新職業「聖騎士」搶先預約</div><div class="card-desc">全新職業「聖騎士」即將登場，融合坦克與治療雙重特性，預約人數達標解鎖全服免費材料包。</div></div><div class="card-footer"><span class="card-time">2026-04-10</span><span class="badge-active"><span class="badge-active-dot"></span>進行中</span><span class="badge-ended">已結束</span><span class="badge-remaining"></span><span class="card-type-badge">新聞</span></div></div>
         </div>
 
-        <div class="news-card" data-type="新聞" data-game="game1">
+        <div class="news-card" data-type="消息" data-game="game1">
           <div class="card-image"></div>
           <div class="card-body"><div><div class="card-game-info"><span class="card-game-name">PlayHorny</span></div><div class="card-title">終極 Boss「深淵龍王」三分鐘速殺攻略</div><div class="card-desc">深淵龍王三階段打法全解析，附推薦職業配置與裝備建議，平均通關時間縮短至 3 分鐘以內。</div></div><div class="card-footer"><span class="card-time">2026-04-12</span><span class="badge-active"><span class="badge-active-dot"></span>進行中</span><span class="badge-ended">已結束</span><span class="badge-remaining"></span><span class="card-type-badge">新聞</span></div></div>
         </div>
 
-        <div class="news-card" data-type="新聞" data-game="game3">
+        <div class="news-card" data-type="消息" data-game="game3">
           <div class="card-image"></div>
           <div class="card-body"><div><div class="card-game-info"><span class="card-game-name">遊戲名稱2</span></div><div class="card-title">裝備強化不爆裝！保底機制完整解說</div><div class="card-desc">詳細解說裝備強化保底機制，提供最佳強化時機判斷與材料儲備建議，降低爆裝風險最大化成功率。</div></div><div class="card-footer"><span class="card-time">2026-04-03</span><span class="badge-active"><span class="badge-active-dot"></span>進行中</span><span class="badge-ended">已結束</span><span class="badge-remaining"></span><span class="card-type-badge">新聞</span></div></div>
         </div>
@@ -584,7 +601,7 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
       <div class="type-sidebar-item active" data-type="全部">全部</div>
       <div class="type-sidebar-item" data-type="活動">活動</div>
       <div class="type-sidebar-item" data-type="更新">更新</div>
-      <div class="type-sidebar-item" data-type="新聞">新聞</div>
+      <div class="type-sidebar-item" data-type="消息">新聞</div>
       <div class="type-sidebar-item" data-type="系統">系統</div>
     </aside>
 
