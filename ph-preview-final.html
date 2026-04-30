@@ -295,6 +295,27 @@
   }
   .combo-badge strong { color: var(--text); font-size: 12px; }
   .combo-badge .chosen { color: #9ecfb0; }
+
+  /* ── Style option buttons ── */
+  .sec-panel { display: none; align-items: center; }
+  .sec-panel.active { display: flex; }
+  .opt-btns { display: flex; gap: 2px; }
+  .opt-btn {
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .opt-btn.active { background: var(--act-bg); color: var(--red); }
+  .opt-btn:hover:not(.active) { color: var(--text); }
 </style>
 </head>
 <body>
@@ -327,9 +348,21 @@
         <button class="sec-tab"        id="tab-info" onclick="setSection('info')">情報站</button>
       </div>
       <div class="vr"></div>
-      <div class="style-summary">
-        <span class="summary-label">定稿樣式</span>
-        <span class="summary-chip" id="summary-chip">載入中…</span>
+      <!-- 首頁樣式選項 -->
+      <div class="sec-panel active" id="panel-home">
+        <div class="opt-btns">
+          <button class="opt-btn" id="hs1" onclick="setHomeStyle(1)">2×2格線</button>
+          <button class="opt-btn" id="hs2" onclick="setHomeStyle(2)">1大＋3小</button>
+          <button class="opt-btn" id="hs3" onclick="setHomeStyle(3)">直排全資訊</button>
+          <button class="opt-btn" id="hs4" onclick="setHomeStyle(4)">1大＋3直排</button>
+        </div>
+      </div>
+      <!-- 情報站樣式摘要 -->
+      <div class="sec-panel" id="panel-info">
+        <div class="style-summary">
+          <span class="summary-label">定稿樣式</span>
+          <span class="summary-chip" id="summary-chip">載入中…</span>
+        </div>
       </div>
     </div>
 
@@ -362,30 +395,42 @@
 </div>
 
 <script>
-  /* ── 定稿選擇 ── */
-  const FINAL = {
-    home: {
-      mobile:  { file: 'playhorny_v4.html',       label: '精選：1大＋3小直排' },
-      desktop: { file: 'playhorny_v2.html',        label: '精選：1大＋3小' },
-    },
-    info: {
-      mobile:  { file: '情報站_demo.html?g=3&t=3', label: '遊戲列：橫列＋下拉 ／ 篩選：多選 Pills' },
-      desktop: { file: '情報站_demo.html?g=3&t=3', label: '遊戲列：橫列＋下拉 ／ 篩選：多選 Pills' },
-    },
+  /* ── 首頁樣式設定 ── */
+  const homeFiles  = { 1:'playhorny_v1.html', 2:'playhorny_v2.html', 3:'playhorny_v3.html', 4:'playhorny_v4.html' };
+  const homeLabels = { 1:'2×2格線', 2:'1大＋3小', 3:'直排全資訊', 4:'1大＋3直排' };
+  const homeAvail  = { mobile:[1,2,3,4], desktop:[1,2] };
+  const homeDefault= { mobile:4, desktop:2 };
+
+  /* ── 情報站定稿 ── */
+  const infoSpec = {
+    mobile:  { file:'情報站_demo.html?g=4&t=3', label:'遊戲列：橫列＋PH ／ 篩選：多選 Pills' },
+    desktop: { file:'情報站_demo.html?g=4&t=3', label:'遊戲列：橫列＋PH ／ 篩選：多選 Pills' },
   };
 
-  let device  = 'mobile';
-  let section = 'home';
+  let device    = 'mobile';
+  let section   = 'home';
+  let homeStyle = { mobile:4, desktop:2 };
 
   function $v(id) { return document.getElementById(id); }
   function act(id, on) { $v(id).classList.toggle('active', on); }
 
-  function currentSpec() { return FINAL[section][device]; }
+  function syncHomeButtons() {
+    const avail = homeAvail[device];
+    [1,2,3,4].forEach(i => {
+      const btn = $v(`hs${i}`);
+      btn.style.display = avail.includes(i) ? '' : 'none';
+      btn.classList.toggle('active', i === homeStyle[device]);
+    });
+  }
+
+  function currentSpec() {
+    if (section === 'info') return infoSpec[device];
+    return { file: homeFiles[homeStyle[device]], label: homeLabels[homeStyle[device]] };
+  }
 
   function updatePreview() {
     const spec  = currentSpec();
     const frame = $v('preview-frame');
-
     frame.classList.add('fading');
     setTimeout(() => {
       frame.src = spec.file;
@@ -393,8 +438,14 @@
       $v('url-bar').textContent    = spec.file;
       $v('badge-file').textContent = spec.file;
       $v('badge-desc').textContent = (section === 'home' ? '首頁' : '情報站') + ' · ' + spec.label;
-      $v('summary-chip').textContent = spec.label;
+      if ($v('summary-chip')) $v('summary-chip').textContent = spec.label;
     }, 200);
+  }
+
+  function setHomeStyle(n) {
+    homeStyle[device] = n;
+    syncHomeButtons();
+    updatePreview();
   }
 
   function setDevice(d) {
@@ -402,14 +453,19 @@
     $v('frame-wrap').classList.toggle('is-mobile', d === 'mobile');
     act('btn-mobile',  d === 'mobile');
     act('btn-desktop', d === 'desktop');
+    if (section === 'home') {
+      // 切換裝置時，若目前樣式在新裝置不支援，回到預設
+      if (!homeAvail[d].includes(homeStyle[d])) homeStyle[d] = homeDefault[d];
+      syncHomeButtons();
+    }
     updatePreview();
   }
 
   function setSection(s) {
     section = s;
-    ['home','info'].forEach(k => {
-      act(`tab-${k}`, k === s);
-    });
+    ['home','info'].forEach(k => act(`tab-${k}`, k === s));
+    $v('panel-home').classList.toggle('active', s === 'home');
+    $v('panel-info').classList.toggle('active', s === 'info');
     updatePreview();
   }
 

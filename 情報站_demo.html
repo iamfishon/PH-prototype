@@ -119,6 +119,25 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
 .el-mobile-trigger .fa-chevron-down { font-size:10px; transition:transform .25s; }
 .el-mobile-trigger.open .fa-chevron-down { transform:rotate(180deg); }
 
+/* ── 遊戲列 樣式4: 桌機版捷徑群組 ── */
+.el-g4-shortcuts {
+  display:none; align-items:center; gap:4px; flex-shrink:0;
+  padding-right:8px; margin-right:4px;
+  border-right:1px solid var(--border);
+}
+.el-g4-shortcuts .game-avatar { display:none !important; }
+
+/* ── 遊戲列 樣式4: PH 觸發按鈕（同 el-mobile-trigger 樣式）── */
+.el-ph-trigger {
+  display:none;
+  background:var(--surface); border:1px solid var(--border); border-top:none;
+  color:var(--muted); padding:5px 16px 9px; border-radius:0 0 14px 14px;
+  font-size:12px; font-weight:600; cursor:pointer; align-items:center; gap:6px;
+  font-family:'Oswald',sans-serif; letter-spacing:.04em; transition:color .2s;
+}
+.el-ph-trigger:hover { color:var(--text); }
+.el-ph-trigger.active { color:var(--red); }
+
 /* ── 手機版 遊戲底部彈窗 ── */
 .el-game-bottomsheet {
   display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.55);
@@ -267,6 +286,21 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
   body[data-game="3"] .game-icon-item { height:48px; }
   body[data-game="3"] .game-icon-item[data-game="all"] .game-avatar { display:none !important; }
   body[data-game="3"] .game-icon-item:nth-child(6n+1) { scroll-snap-align:start; }
+
+  /* ── game=4 mobile: 移除全部與PH，PH 改為觸發按鈕，遊戲列 2 欄 ── */
+  body[data-game="4"] .game-icon-item[data-game="all"]   { display:none !important; }
+  body[data-game="4"] .game-icon-item[data-game="game1"] { display:none !important; }
+  body[data-game="4"] .el-mobile-trigger-wrap { display:flex; }
+  body[data-game="4"] .el-ph-trigger { display:flex; }
+  body[data-game="4"] #allTrigger { display:flex; }
+  body[data-game="4"] .game-icons-scroll {
+    display:grid !important;
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(2,48px);
+    overflow:visible;
+    gap:6px; padding:0;
+  }
+  body[data-game="4"] .game-icon-item { width:100%; height:48px; }
 }
 
 /* ── DESKTOP (≥900px) ── */
@@ -334,6 +368,13 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
   body[data-game="3"] .desktop-game-header { display:block; }
   body[data-game="3"] .el-dropdown-toggle  { display:flex; }
 
+  /* game=4 desktop */
+  body[data-game="4"] .desktop-game-header { display:block; }
+  body[data-game="4"] .el-dropdown-toggle  { display:flex; }
+  body[data-game="4"] .el-g4-shortcuts     { display:flex; }
+  body[data-game="4"] .game-icons-scroll .game-icon-item[data-game="all"]   { display:none !important; }
+  body[data-game="4"] .game-icons-scroll .game-icon-item[data-game="game1"] { display:none !important; }
+
   /* sidebar games col */
   .el-gsidebar-games {
     flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden;
@@ -382,11 +423,14 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
 
 <div class="page-frame">
 
-  <div class="hero"><div class="hero-title">場景</div></div>
-
   <!-- ▸ 遊戲列 樣式1: 上方橫列 -->
   <div class="el-topbar">
     <div class="game-icon-row">
+      <!-- ▸ 樣式4 桌機版: 全部＋PH 固定捷徑（箭頭外側） -->
+      <div class="el-g4-shortcuts">
+        <div class="game-icon-item active" data-game="all"><div class="game-avatar all-avatar">全部</div><span class="game-avatar-label">全部</span></div>
+        <div class="game-icon-item" data-game="game1"><div class="game-avatar" style="background:#C8E6C9;"></div><span class="game-avatar-label">PlayHorny</span></div>
+      </div>
       <button class="scroll-btn" id="scrollLeft">&#8249;</button>
       <div class="game-icons-scroll" id="gameIcons">
         <div class="game-icon-item active" data-game="all"><div class="game-avatar all-avatar">全部</div><span class="game-avatar-label">全部</span></div>
@@ -421,10 +465,14 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
     </div>
   </div>
 
-  <!-- ▸ 手機版 遊戲列 樣式3: 底部觸發 tab -->
+  <!-- ▸ 手機版 遊戲列 樣式3/4: 底部觸發 tab -->
   <div class="el-mobile-trigger-wrap">
+    <!-- 樣式4: 全部觸發 -->
+    <button class="el-ph-trigger" id="allTrigger" data-game="all">全部</button>
+    <!-- 樣式4: PH 獨立觸發 -->
+    <button class="el-ph-trigger" id="phTrigger" data-game="game1">PlayHorny</button>
     <button class="el-mobile-trigger" id="gameMobileTrigger">
-      <i class="fas fa-gamepad"></i> 更多 <i class="fas fa-chevron-down"></i>
+      更多 <i class="fas fa-chevron-down"></i>
     </button>
   </div>
 
@@ -692,6 +740,8 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
     currentGame = game;
     document.querySelectorAll('.game-icon-item, .sidebar-game-item, .dropdown-game-btn, .bottomsheet-game-btn')
       .forEach(el => el.classList.toggle('active', el.dataset.game === game));
+    document.getElementById('allTrigger')?.classList.toggle('active', game === 'all');
+    document.getElementById('phTrigger')?.classList.toggle('active', game === 'game1');
     [mobileTitle, mobileCrumb, deskTitle, deskCrumb].forEach(el => { if (el) el.textContent = name; });
     applyFilter();
   }
@@ -751,10 +801,39 @@ h1,h2,h3,.brand-font { font-family:'Oswald','Noto Sans TC',sans-serif; text-tran
     );
   }
 
+  /* ── game=4 遊戲列分頁 ── */
+  const G4_GAMES = ['game2','game3','game4','game5','game6'];
+  let g4Page = 0;
+
+  function g4UpdatePage() {
+    G4_GAMES.forEach((gId, i) => {
+      const el = document.querySelector(`.game-icons-scroll .game-icon-item[data-game="${gId}"]`);
+      if (el) el.style.display = (Math.floor(i / 4) === g4Page) ? '' : 'none';
+    });
+  }
+
+  if (document.body.getAttribute('data-game') === '4') g4UpdatePage();
+
+  /* ── 全部／PH 觸發按鈕（樣式4）── */
+  document.getElementById('allTrigger')?.addEventListener('click', () => setGame('all', '全部'));
+  document.getElementById('phTrigger')?.addEventListener('click', () => setGame('game1', 'PlayHorny'));
+
   /* ── Scroll buttons ── */
   const scroller = document.getElementById('gameIcons');
-  document.getElementById('scrollLeft').addEventListener('click',  () => scroller.scrollBy({ left:-140, behavior:'smooth' }));
-  document.getElementById('scrollRight').addEventListener('click', () => scroller.scrollBy({ left: 140, behavior:'smooth' }));
+  document.getElementById('scrollLeft').addEventListener('click', () => {
+    if (document.body.getAttribute('data-game') === '4' && window.innerWidth <= 899) {
+      if (g4Page > 0) { g4Page--; g4UpdatePage(); }
+    } else {
+      scroller.scrollBy({ left:-140, behavior:'smooth' });
+    }
+  });
+  document.getElementById('scrollRight').addEventListener('click', () => {
+    if (document.body.getAttribute('data-game') === '4' && window.innerWidth <= 899) {
+      if (g4Page < Math.ceil(G4_GAMES.length / 4) - 1) { g4Page++; g4UpdatePage(); }
+    } else {
+      scroller.scrollBy({ left: 140, behavior:'smooth' });
+    }
+  });
 
   /* ── Pagination ── */
   const pageBtns = document.querySelectorAll('.page-btn:not(.arrow)');

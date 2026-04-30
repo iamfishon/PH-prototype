@@ -174,6 +174,7 @@
   }
   .opt-btn:hover { border-color: #555; color: var(--text); }
   .opt-btn.active { border-color: var(--red); background: var(--act-bg); color: var(--red); }
+  .opt-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 1.8; vertical-align: middle; margin-right: 3px; opacity: 0.7; }
 
   /* Section panels */
   .sec-panel { display: none; align-items: center; gap: 10px; flex: 1; }
@@ -369,7 +370,7 @@
           <button class="opt-btn active" id="hs1" onclick="setHomeStyle(1)">2×2 格線</button>
           <button class="opt-btn"        id="hs2" onclick="setHomeStyle(2)">1大＋3小</button>
           <button class="opt-btn"        id="hs3" onclick="setHomeStyle(3)">直排全資訊</button>
-          <button class="opt-btn"        id="hs4" onclick="setHomeStyle(4)">1大＋3直排</button>
+          <button class="opt-btn"        id="hs4" onclick="setHomeStyle(4)"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17.5" r="1" fill="currentColor" stroke="none"/></svg>1大＋3直排</button>
         </div>
       </div>
     </div>
@@ -382,6 +383,7 @@
           <button class="opt-btn active" id="ig1" onclick="setInfoGame(1)">上方橫列</button>
           <button class="opt-btn"        id="ig2" onclick="setInfoGame(2)">左側欄位</button>
           <button class="opt-btn"        id="ig3" onclick="setInfoGame(3)">橫列＋下拉</button>
+          <button class="opt-btn"        id="ig4" onclick="setInfoGame(4)">橫列＋PH</button>
         </div>
       </div>
       <div class="vr"></div>
@@ -447,7 +449,7 @@
 
   /* ── 各裝置可見的樣式清單 ── */
   const homeAvail   = { mobile: [1,2,3,4], desktop: [1,2]   };
-  const gameAvail   = { mobile: [1,3],   desktop: [1,2,3] };
+  const gameAvail   = { mobile: [1,3,4], desktop: [1,2,3,4] };
   const typeDevice  = { mobile: [2,3],   desktop: [1,2,3] };
 
   function availTypes() {
@@ -456,7 +458,7 @@
 
   /* ── Labels ── */
   const homeLabels = { 1: '2×2 格線', 2: '1大＋3小', 3: '直排全資訊', 4: '1大＋3直排' };
-  const gameLabels = { 1: '上方橫列', 2: '左側欄位', 3: '橫列＋下拉' };
+  const gameLabels = { 1: '上方橫列', 2: '左側欄位', 3: '橫列＋下拉', 4: '橫列＋PH獨立' };
   const typeLabels = { 1: '側邊分割', 2: '單選 Tabs', 3: '多選 Pills' };
 
   /* ── Helpers ── */
@@ -499,10 +501,10 @@
 
     // 情報站 遊戲列
     const ga = gameAvail[device];
-    [1,2,3].forEach(i => vis(`ig${i}`, ga.includes(i)));
+    [1,2,3,4].forEach(i => vis(`ig${i}`, ga.includes(i)));
     if (!ga.includes(infoGame)) {
       infoGame = ga[0];
-      [1,2,3].forEach(i => act(`ig${i}`, i === infoGame));
+      [1,2,3,4].forEach(i => act(`ig${i}`, i === infoGame));
     }
 
     // 情報站 類型篩選 (裝置 × 組合 雙重限制)
